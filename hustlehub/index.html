@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HustleHub | Side Gig Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                <h1>HustleHub</h1>
+                <span class="tagline">Side Gig Dashboard</span>
+            </div>
+            <div class="date-display">
+                <p id="current-date">Loading...</p>
+            </div>
+        </header>
+
+        <!-- Summary Dashboard -->
+        <section class="dashboard-summary">
+            <div class="summary-card">
+                <h3><i class="fas fa-calendar-week"></i> Weekly Net</h3>
+                <p class="amount" id="weekly-net">$0.00</p>
+            </div>
+            <div class="summary-card">
+                <h3><i class="fas fa-calendar-alt"></i> Monthly Net</h3>
+                <p class="amount" id="monthly-net">$0.00</p>
+            </div>
+            <div class="summary-card">
+                <h3><i class="fas fa-money-bill-wave"></i> Total Income</h3>
+                <p class="amount positive" id="total-income">$0.00</p>
+            </div>
+            <div class="summary-card">
+                <h3><i class="fas fa-receipt"></i> Total Expenses</h3>
+                <p class="amount negative" id="total-expenses">$0.00</p>
+            </div>
+        </section>
+
+        <!-- Controls Section -->
+        <section class="controls">
+            <div class="column-toggle">
+                <h3><i class="fas fa-columns"></i> Show/Hide Columns:</h3>
+                <div class="toggle-options">
+                    <label><input type="checkbox" class="column-checkbox" data-column="date" checked> Date</label>
+                    <label><input type="checkbox" class="column-checkbox" data-column="type" checked> Gig Type</label>
+                    <label><input type="checkbox" class="column-checkbox" data-column="category" checked> Category</label>
+                    <label><input type="checkbox" class="column-checkbox" data-column="amount" checked> Amount</label>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="add-row-btn" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add New Transaction
+                </button>
+                <button id="clear-btn" class="btn btn-secondary">
+                    <i class="fas fa-trash-alt"></i> Clear All
+                </button>
+            </div>
+        </section>
+
+        <!-- Main Spreadsheet Table -->
+        <main class="spreadsheet-container">
+            <div class="table-wrapper">
+                <table id="gig-table">
+                    <thead>
+                        <tr>
+                            <th class="date-col">Date</th>
+                            <th class="type-col">Gig Type</th>
+                            <th class="category-col">Category</th>
+                            <th class="amount-col">Amount</th>
+                            <th class="actions-col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Rows will be added here by JavaScript -->
+                        <tr class="empty-row">
+                            <td colspan="5">No transactions yet. Click "Add New Transaction" to get started!</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <!-- Add Transaction Form (Hidden by default) -->
+        <div id="add-form-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-plus-circle"></i> Add New Transaction</h2>
+                    <button id="close-modal-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="transaction-form">
+                        <div class="form-group">
+                            <label for="date-input"><i class="fas fa-calendar-day"></i> Date:</label>
+                            <input type="date" id="date-input" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="type-select"><i class="fas fa-briefcase"></i> Gig Type:</label>
+                            <select id="type-select" required>
+                                <option value="">Select gig type...</option>
+                                <option value="DoorDash">DoorDash</option>
+                                <option value="Uber">Uber</option>
+                                <option value="eBay">eBay</option>
+                                <option value="Freelance">Freelance</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="category-select"><i class="fas fa-tag"></i> Category:</label>
+                            <select id="category-select" required>
+                                <option value="">Select category...</option>
+                                <option value="Income">Income</option>
+                                <option value="Expense">Expense</option>
+                                <option value="Fees">Fees</option>
+                                <option value="Supplies">Supplies</option>
+                                <option value="Transportation">Transportation</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="amount-input"><i class="fas fa-dollar-sign"></i> Amount:</label>
+                            <div class="amount-input-wrapper">
+                                <span class="currency">$</span>
+                                <input type="number" id="amount-input" step="0.01" min="0" placeholder="0.00" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="description-input"><i class="fas fa-sticky-note"></i> Description (optional):</label>
+                            <input type="text" id="description-input" placeholder="e.g., 'Gas for deliveries', 'Sold custom shirt'">
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Add Transaction
+                            </button>
+                            <button type="button" id="cancel-btn" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>CS 4875: Human Centered Computing | Fall 2025 | Group 09 - HustleHub</p>
+            <p class="instructions">
+                <i class="fas fa-lightbulb"></i> Tip: Track your DoorDash trips, eBay sales, and expenses here to see your true profitability!
+            </p>
+        </footer>
+    </div>
+
+    <!-- JavaScript file -->
+    <script src="script.js"></script>
+</body>
+</html>
