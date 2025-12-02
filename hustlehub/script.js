@@ -387,3 +387,95 @@ function formatCurrency(amount) {
         currency: 'USD'
     }).format(amount);
 }
+
+/* ==========================================
+   AI ASSISTANT LOGIC (Design Alternative 3)
+   ========================================== */
+
+const aiToggle = document.getElementById('ai-toggle-btn');
+const aiWindow = document.getElementById('ai-chat-window');
+const aiClose = document.getElementById('ai-close-btn');
+const aiInput = document.getElementById('ai-input');
+const aiSend = document.getElementById('ai-send-btn');
+const aiMessages = document.getElementById('ai-messages');
+
+// Toggle Window
+aiToggle.addEventListener('click', () => aiWindow.style.display = 'flex');
+aiClose.addEventListener('click', () => aiWindow.style.display = 'none');
+
+// Send Message
+aiSend.addEventListener('click', handleAiMessage);
+aiInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleAiMessage(); });
+
+function handleAiMessage() {
+  const text = aiInput.value.trim();
+  if (!text) return;
+
+  // 1. Add User Message
+  addMessage(text, 'user');
+  aiInput.value = '';
+
+  // 2. Simulate AI Thinking
+  setTimeout(() => {
+    processAiCommand(text);
+  }, 800);
+}
+
+function addMessage(text, sender) {
+  const div = document.createElement('div');
+  div.className = `message ${sender}`;
+  div.textContent = text;
+  aiMessages.appendChild(div);
+  aiMessages.scrollTop = aiMessages.scrollHeight;
+}
+
+function processAiCommand(text) {
+  const lower = text.toLowerCase();
+  let type = 'Other';
+  let category = 'Expense';
+  let amount = 0;
+  let desc = 'AI Entry';
+
+  // Simple "Mock AI" keyword detection
+  if (lower.includes('uber') || lower.includes('drive')) type = 'Uber';
+  if (lower.includes('dash') || lower.includes('delivery')) type = 'DoorDash';
+  if (lower.includes('ebay') || lower.includes('sold')) { type = 'eBay'; category = 'Income'; }
+  if (lower.includes('made') || lower.includes('earned')) category = 'Income';
+  
+  // Extract number (e.g., "made $50")
+  const moneyMatch = text.match(/\$?(\d+(\.\d{1,2})?)/);
+  if (moneyMatch) {
+    amount = parseFloat(moneyMatch[1]);
+  } else {
+    addMessage("I couldn't understand the amount. Try saying 'Made $50 on Uber'.", 'bot');
+    return;
+  }
+
+  // Fix sign based on category
+  if (category === 'Expense' || lower.includes('spent') || lower.includes('gas')) {
+    category = 'Expense';
+    amount = -Math.abs(amount);
+    if (lower.includes('gas')) desc = 'Gas';
+  } else {
+    category = 'Income';
+    amount = Math.abs(amount);
+  }
+
+  // 3. Create Transaction using Teammate's existing logic
+  const newTx = {
+    id: Date.now(),
+    date: new Date().toISOString().split('T')[0],
+    type: type,
+    category: category,
+    amount: amount,
+    description: text
+  };
+
+  // 4. Push to existing array and update
+  transactions.push(newTx);
+  saveData();
+  renderTable();
+  updateSummary();
+
+  addMessage(`Got it! I logged a ${category} of $${Math.abs(amount)} for ${type}.`, 'bot');
+}
