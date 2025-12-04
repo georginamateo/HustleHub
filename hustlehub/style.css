@@ -30,6 +30,7 @@ body {
     padding: 20px 30px;
     background: linear-gradient(135deg, #4361ee, #3a0ca3);
     color: white;
+    position: relative;
 }
 
 .logo {
@@ -54,9 +55,99 @@ body {
     font-size: 0.9rem;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
 .date-display p {
     font-size: 1.1rem;
     font-weight: 500;
+}
+
+/* Hamburger Menu Button */
+.hamburger-btn {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 35px;
+    height: 30px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1500;
+    position: relative;
+}
+
+.hamburger-btn .bar {
+    width: 100%;
+    height: 3px;
+    background-color: white;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+    transform-origin: center;
+}
+
+.hamburger-btn.active .bar:nth-child(1) {
+    transform: translateY(9px) rotate(45deg);
+}
+
+.hamburger-btn.active .bar:nth-child(2) {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+.hamburger-btn.active .bar:nth-child(3) {
+    transform: translateY(-9px) rotate(-45deg);
+}
+
+/* Menu Dropdown */
+.menu-dropdown {
+    position: fixed;
+    top: 0;
+    right: -300px;
+    height: 100vh;
+    width: 280px;
+    background: linear-gradient(135deg, #4361ee, #3a0ca3);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.2);
+    transition: right 0.4s ease;
+    z-index: 1400;
+    padding-top: 80px;
+    overflow-y: auto;
+}
+
+.menu-dropdown.show {
+    right: 0;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px 25px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
+.menu-item:last-child {
+    border-bottom: none;
+}
+
+.menu-item:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding-left: 30px;
+}
+
+.menu-item i {
+    font-size: 1.3rem;
+    width: 30px;
+    text-align: center;
 }
 
 /* Summary Dashboard */
@@ -612,6 +703,20 @@ body {
 .filter-actions .btn {
     flex: 1;
     justify-content: center;
+}
+
+/* Clear All Section */
+.clear-all-section {
+    padding: 20px 30px;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #eaeaea;
+}
+
+.clear-all-section .btn {
+    min-width: 250px;
+    padding: 12px 30px;
+    font-size: 1rem;
 }
 
 /* Footer */

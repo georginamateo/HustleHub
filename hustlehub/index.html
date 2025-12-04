@@ -16,10 +16,29 @@
                 <h1>HustleHub</h1>
                 <span class="tagline">Side Gig Dashboard</span>
             </div>
-            <div class="date-display">
-                <p id="current-date">Loading...</p>
+            <div class="header-right">
+                <div class="date-display">
+                    <p id="current-date">Loading...</p>
+                </div>
+                <button id="hamburger-menu" class="hamburger-btn">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
             </div>
         </header>
+
+        <!-- Hamburger Menu Dropdown -->
+        <div id="menu-dropdown" class="menu-dropdown">
+            <div class="menu-item" id="menu-create">
+                <i class="fas fa-plus-circle"></i>
+                <span>Create an Item</span>
+            </div>
+            <div class="menu-item" id="menu-edit-delete">
+                <i class="fas fa-edit"></i>
+                <span>Edit/Delete an Item</span>
+            </div>
+        </div>
 
         <!-- Summary Dashboard -->
         <section class="dashboard-summary">
@@ -59,9 +78,6 @@
                 </button>
                 <button id="add-row-btn" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Add New Transaction
-                </button>
-                <button id="clear-btn" class="btn btn-secondary">
-                    <i class="fas fa-trash-alt"></i> Clear All
                 </button>
             </div>
         </section>
@@ -237,6 +253,13 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Clear All Button Section -->
+        <div class="clear-all-section">
+            <button id="clear-btn" class="btn btn-secondary">
+                <i class="fas fa-trash-alt"></i> Clear All Transactions
+            </button>
         </div>
 
         <!-- Footer -->

@@ -58,6 +58,43 @@ function addSampleData() {
 
 // Set up all event listeners
 function setupEventListeners() {
+    // Hamburger Menu
+    const hamburgerBtn = document.getElementById('hamburger-menu');
+    const menuDropdown = document.getElementById('menu-dropdown');
+    
+    if (hamburgerBtn) {
+        hamburgerBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            hamburgerBtn.classList.toggle('active');
+            menuDropdown.classList.toggle('show');
+        });
+    }
+    
+    // Menu Items
+    const menuCreate = document.getElementById('menu-create');
+    const menuEditDelete = document.getElementById('menu-edit-delete');
+    
+    if (menuCreate) {
+        menuCreate.addEventListener('click', function() {
+            closeHamburgerMenu();
+            showAddForm();
+        });
+    }
+    
+    if (menuEditDelete) {
+        menuEditDelete.addEventListener('click', function() {
+            closeHamburgerMenu();
+            alert('Click the edit button (pencil icon) next to any transaction to edit it, or the delete button (trash icon) to remove it.');
+        });
+    }
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', function(e) {
+        if (menuDropdown && !hamburgerBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
+            closeHamburgerMenu();
+        }
+    });
+    
     // Filter Button
     const filterBtn = document.getElementById('filter-btn');
     if (filterBtn) {
@@ -109,6 +146,19 @@ function setupEventListeners() {
             hideFilterMenu();
         }
     });
+}
+
+// Close hamburger menu
+function closeHamburgerMenu() {
+    const hamburgerBtn = document.getElementById('hamburger-menu');
+    const menuDropdown = document.getElementById('menu-dropdown');
+    
+    if (hamburgerBtn) {
+        hamburgerBtn.classList.remove('active');
+    }
+    if (menuDropdown) {
+        menuDropdown.classList.remove('show');
+    }
 }
 
 // Show the filter menu
