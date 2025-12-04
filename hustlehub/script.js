@@ -1,31 +1,36 @@
 // Main Application
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize the app
-    initializeApp();
-    
-    // Set today's date in the header
-    setCurrentDate();
-    
-    // Set up event listeners
+    // 1. Setup Event Listeners first
     setupEventListeners();
     
-    // Load any saved data from localStorage
-    loadSavedData();
-    
-    // Update summary calculations
+    // 2. Set the date
+    setCurrentDate();
+
+    // 3. Try to load data from LocalStorage
+    const hasSavedData = loadSavedData();
+
+    // 4. ONLY if no data was found, load the sample data
+    if (!hasSavedData) {
+        addSampleData();
+    }
+
+    // 5. Render everything
+    renderTable();
     updateSummary();
+    updateCharts(); // Initialize charts
 });
 
 // Variables to store transactions
 let transactions = [];
 
-// Initialize the app
-function initializeApp() {
-    // Add some sample data for demo purposes
-    if (transactions.length === 0) {
-        addSampleData();
-    }
-}
+// Chart instances
+let incomeChart = null;
+let monthlyChart = null;
+let trendChart = null;
+
+// Current month for monthly chart
+let currentChartMonth = new Date().getMonth();
+let currentChartYear = new Date().getFullYear();
 
 // Set current date in header
 function setCurrentDate() {
@@ -34,64 +39,76 @@ function setCurrentDate() {
     document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
 }
 
-// Add sample data for demo
+// Add sample data for demo (Only runs if storage is empty)
 function addSampleData() {
+    // Generate sample data for multiple months
     const sampleTransactions = [
+        // January 2025
         { id: 1, date: '2025-01-15', type: 'DoorDash', category: 'Income', amount: 45.20, description: 'Lunch deliveries' },
         { id: 2, date: '2025-01-16', type: 'DoorDash', category: 'Income', amount: 37.20, description: 'Dinner shift' },
         { id: 3, date: '2025-01-18', type: 'Uber', category: 'Income', amount: 68.50, description: 'Airport trip' },
         { id: 4, date: '2025-01-19', type: 'Other', category: 'Expense', amount: -56.00, description: 'Gas refill' },
         { id: 5, date: '2025-01-20', type: 'eBay', category: 'Income', amount: 100.50, description: 'Sold vintage jacket' },
-        { id: 6, date: '2025-01-21', type: 'eBay', category: 'Fees', amount: -12.00, description: 'eBay seller fee' }
+        { id: 6, date: '2025-01-21', type: 'eBay', category: 'Fees', amount: -12.00, description: 'eBay seller fee' },
+        
+        // February 2025
+        { id: 7, date: '2025-02-10', type: 'DoorDash', category: 'Income', amount: 52.30, description: 'Weekend deliveries' },
+        { id: 8, date: '2025-02-15', type: 'Uber', category: 'Income', amount: 72.80, description: 'Evening rides' },
+        { id: 9, date: '2025-02-20', type: 'Freelance', category: 'Income', amount: 200.00, description: 'Web design project' },
+        { id: 10, date: '2025-02-22', type: 'Other', category: 'Expense', amount: -45.00, description: 'Phone bill' },
+        
+        // December 2024
+        { id: 11, date: '2024-12-05', type: 'eBay', category: 'Income', amount: 85.00, description: 'Sold old books' },
+        { id: 12, date: '2024-12-20', type: 'Uber', category: 'Income', amount: 95.25, description: 'Holiday trips' },
     ];
-    
+
     transactions = sampleTransactions;
-    renderTable();
+    saveData(); // Save these immediately so they persist
 }
 
 // Set up all event listeners
 function setupEventListeners() {
     // Add Row Button
     document.getElementById('add-row-btn').addEventListener('click', showAddForm);
-    
+
     // Close Modal Buttons
     document.getElementById('close-modal-btn').addEventListener('click', hideAddForm);
     document.getElementById('cancel-btn').addEventListener('click', hideAddForm);
-    
+
     // Form Submission
     document.getElementById('transaction-form').addEventListener('submit', handleFormSubmit);
-    
+
     // Clear All Button
     document.getElementById('clear-btn').addEventListener('click', clearAllTransactions);
-    
+
     // Column Toggle Checkboxes
     document.querySelectorAll('.column-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', toggleColumnVisibility);
     });
-    
+
     // Close modal when clicking outside
     document.getElementById('add-form-modal').addEventListener('click', function(e) {
         if (e.target === this) {
             hideAddForm();
         }
     });
+
+    // Chart Controls
+    document.getElementById('chart-period')?.addEventListener('change', updateCharts);
+    document.getElementById('prev-month-btn')?.addEventListener('click', () => navigateMonth(-1));
+    document.getElementById('next-month-btn')?.addEventListener('click', () => navigateMonth(1));
+    document.getElementById('trend-period')?.addEventListener('change', updateCharts);
 }
 
 // Show the add transaction form
 function showAddForm() {
     document.getElementById('add-form-modal').style.display = 'flex';
-    
-    // Set today's date as default
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date-input').value = today;
-    
-    // Clear form fields except date
     document.getElementById('type-select').value = '';
     document.getElementById('category-select').value = '';
     document.getElementById('amount-input').value = '';
     document.getElementById('description-input').value = '';
-    
-    // Focus on first field
     document.getElementById('type-select').focus();
 }
 
@@ -103,97 +120,75 @@ function hideAddForm() {
 // Handle form submission
 function handleFormSubmit(e) {
     e.preventDefault();
-    
-    // Get form values
+
     const date = document.getElementById('date-input').value;
     const type = document.getElementById('type-select').value;
     const category = document.getElementById('category-select').value;
     let amount = parseFloat(document.getElementById('amount-input').value);
     const description = document.getElementById('description-input').value;
-    
-    // Validate amount
+
     if (isNaN(amount) || amount === 0) {
         alert('Please enter a valid amount');
         return;
     }
-    
-    // Make amount negative for expenses/fees
+
     if (category === 'Expense' || category === 'Fees' || category === 'Supplies' || category === 'Transportation') {
         amount = -Math.abs(amount);
     }
-    
-    // Create new transaction object
+
     const newTransaction = {
-        id: Date.now(), // Simple ID using timestamp
+        id: Date.now(),
         date: date,
         type: type,
         category: category,
         amount: amount,
         description: description || `${category} from ${type}`
     };
-    
-    // Add to transactions array
+
     transactions.push(newTransaction);
-    
-    // Save to localStorage
     saveData();
-    
-    // Update the table
     renderTable();
-    
-    // Update summary
     updateSummary();
-    
-    // Hide the form
+    updateCharts(); // Update charts when new data is added
     hideAddForm();
-    
-    // Show success message
-    alert('Transaction added successfully!');
 }
 
 // Render the table with all transactions
 function renderTable() {
     const tableBody = document.getElementById('table-body');
-    
-    // Clear existing rows (except empty row message)
     tableBody.innerHTML = '';
-    
+
     if (transactions.length === 0) {
-        // Show empty message
         const emptyRow = document.createElement('tr');
         emptyRow.className = 'empty-row';
         emptyRow.innerHTML = '<td colspan="5">No transactions yet. Click "Add New Transaction" to get started!</td>';
         tableBody.appendChild(emptyRow);
         return;
     }
-    
-    // Sort transactions by date (newest first)
+
     const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    // Add each transaction as a row
+
     sortedTransactions.forEach(transaction => {
         const row = document.createElement('tr');
-        
-        // Add class based on income/expense
         if (transaction.amount > 0) {
             row.className = 'income-row';
         } else {
             row.className = 'expense-row';
         }
-        
-        // Format date for display
+
         const dateObj = new Date(transaction.date);
-        const formattedDate = dateObj.toLocaleDateString('en-US', { 
+        const userTimezoneOffset = dateObj.getTimezoneOffset() * 60000;
+        const adjustedDate = new Date(dateObj.getTime() + userTimezoneOffset);
+        
+        const formattedDate = adjustedDate.toLocaleDateString('en-US', { 
             month: 'short', 
             day: 'numeric' 
         });
-        
-        // Format amount for display
+
         const formattedAmount = transaction.amount >= 0 
             ? `+$${transaction.amount.toFixed(2)}` 
             : `-$${Math.abs(transaction.amount).toFixed(2)}`;
-        
-        // Create row HTML
+
         row.innerHTML = `
             <td class="date-col">${formattedDate}</td>
             <td class="type-col">${transaction.type}</td>
@@ -208,108 +203,78 @@ function renderTable() {
                 </button>
             </td>
         `;
-        
+
         tableBody.appendChild(row);
     });
-    
-    // Add event listeners to edit and delete buttons
+
     addRowActionListeners();
 }
 
-// Add event listeners to edit and delete buttons in table rows
 function addRowActionListeners() {
-    // Delete buttons
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = parseInt(this.getAttribute('data-id'));
             deleteTransaction(id);
         });
     });
-    
-    // Edit buttons (basic implementation - you can expand this)
+
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const id = parseInt(this.getAttribute('data-id'));
-            // For now, just show an alert
             alert('Edit functionality will be added in a future update!');
-            // You could implement a full edit feature here
         });
     });
 }
 
-// Delete a transaction
 function deleteTransaction(id) {
     if (confirm('Are you sure you want to delete this transaction?')) {
-        // Filter out the transaction with the given id
         transactions = transactions.filter(transaction => transaction.id !== id);
-        
-        // Save to localStorage
         saveData();
-        
-        // Update the table
         renderTable();
-        
-        // Update summary
         updateSummary();
-        
-        // Show confirmation
-        alert('Transaction deleted successfully!');
+        updateCharts(); // Update charts when data is deleted
     }
 }
 
-// Clear all transactions
 function clearAllTransactions() {
     if (transactions.length === 0) {
         alert('There are no transactions to clear.');
         return;
     }
-    
+
     if (confirm('Are you sure you want to clear ALL transactions? This cannot be undone.')) {
         transactions = [];
-        
-        // Save to localStorage
         saveData();
-        
-        // Update the table
         renderTable();
-        
-        // Update summary
         updateSummary();
-        
-        // Show confirmation
-        alert('All transactions cleared!');
+        updateCharts(); // Update charts when all data is cleared
     }
 }
 
-// Toggle column visibility based on checkbox
 function toggleColumnVisibility() {
     const column = this.getAttribute('data-column');
     const isVisible = this.checked;
-    
-    // Show/hide all cells in this column
     const columnClass = `${column}-col`;
     const elements = document.querySelectorAll(`.${columnClass}`);
-    
+
     elements.forEach(element => {
         element.style.display = isVisible ? '' : 'none';
     });
 }
 
-// Update the summary dashboard
 function updateSummary() {
     if (transactions.length === 0) {
-        // Reset all to zero
         document.getElementById('weekly-net').textContent = '$0.00';
         document.getElementById('monthly-net').textContent = '$0.00';
         document.getElementById('total-income').textContent = '$0.00';
         document.getElementById('total-expenses').textContent = '$0.00';
+        document.getElementById('weekly-net').className = 'amount';
+        document.getElementById('monthly-net').className = 'amount';
         return;
     }
-    
-    // Calculate totals
+
     let totalIncome = 0;
     let totalExpenses = 0;
-    
+
     transactions.forEach(transaction => {
         if (transaction.amount > 0) {
             totalIncome += transaction.amount;
@@ -317,40 +282,30 @@ function updateSummary() {
             totalExpenses += Math.abs(transaction.amount);
         }
     });
-    
-    const totalNet = totalIncome - totalExpenses;
-    
+
     // Calculate weekly net (last 7 days)
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
     let weeklyNet = 0;
-    transactions.forEach(transaction => {
-        const transactionDate = new Date(transaction.date);
-        if (transactionDate >= oneWeekAgo) {
-            weeklyNet += transaction.amount;
-        }
-    });
-    
+
     // Calculate monthly net (last 30 days)
     const oneMonthAgo = new Date();
     oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-    
     let monthlyNet = 0;
+
     transactions.forEach(transaction => {
-        const transactionDate = new Date(transaction.date);
-        if (transactionDate >= oneMonthAgo) {
-            monthlyNet += transaction.amount;
-        }
+        const tDate = new Date(transaction.date);
+        const adjustedDate = new Date(tDate.getTime() + (tDate.getTimezoneOffset() * 60000));
+
+        if (adjustedDate >= oneWeekAgo) weeklyNet += transaction.amount;
+        if (adjustedDate >= oneMonthAgo) monthlyNet += transaction.amount;
     });
-    
-    // Update the DOM
+
     document.getElementById('weekly-net').textContent = `$${weeklyNet.toFixed(2)}`;
     document.getElementById('monthly-net').textContent = `$${monthlyNet.toFixed(2)}`;
     document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
     document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
-    
-    // Color code the weekly/monthly net
+
     document.getElementById('weekly-net').className = weeklyNet >= 0 ? 'amount positive' : 'amount negative';
     document.getElementById('monthly-net').className = monthlyNet >= 0 ? 'amount positive' : 'amount negative';
 }
@@ -363,27 +318,418 @@ function saveData() {
 // Load data from localStorage
 function loadSavedData() {
     const savedData = localStorage.getItem('hustlehub-transactions');
-    
     if (savedData) {
         try {
             const parsedData = JSON.parse(savedData);
-            
-            // Only load if we have data and no sample data is already loaded
-            if (parsedData.length > 0 && transactions.length === 0) {
-                transactions = parsedData;
-                renderTable();
-                updateSummary();
-            }
+            transactions = parsedData;
+            return true;
         } catch (error) {
             console.error('Error loading saved data:', error);
+            return false;
         }
+    }
+    return false;
+}
+
+// ==========================================
+// CHART FUNCTIONS
+// ==========================================
+
+// Update all charts
+function updateCharts() {
+    updateIncomeChart();
+    updateMonthlyChart();
+    updateTrendChart();
+}
+
+// Update income by gig type chart
+function updateIncomeChart() {
+    const period = document.getElementById('chart-period').value;
+    const filteredTransactions = filterTransactionsByPeriod(period);
+    
+    // Group income by gig type
+    const incomeByType = {};
+    
+    filteredTransactions.forEach(transaction => {
+        if (transaction.amount > 0) { // Only income
+            if (!incomeByType[transaction.type]) {
+                incomeByType[transaction.type] = 0;
+            }
+            incomeByType[transaction.type] += transaction.amount;
+        }
+    });
+    
+    const types = Object.keys(incomeByType);
+    const amounts = Object.values(incomeByType);
+    
+    // Colors for chart
+    const colors = [
+        '#4361ee',
+        '#10b981',
+        '#f59e0b',
+        '#ef4444',
+        '#8b5cf6',
+    ];
+    
+    const ctx = document.getElementById('income-chart').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (incomeChart) {
+        incomeChart.destroy();
+    }
+    
+    incomeChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: types,
+            datasets: [{
+                data: amounts,
+                backgroundColor: colors.slice(0, types.length),
+                borderColor: 'white',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const total = amounts.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${context.label}: $${value.toFixed(2)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update monthly performance chart
+function updateMonthlyChart() {
+    // Update month label
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    document.getElementById('current-month-label').textContent = 
+        `${monthNames[currentChartMonth]} ${currentChartYear}`;
+    
+    // Get transactions for current month
+    const monthTransactions = transactions.filter(transaction => {
+        const date = new Date(transaction.date);
+        return date.getMonth() === currentChartMonth && 
+               date.getFullYear() === currentChartYear;
+    });
+    
+    // Group by day
+    const daysInMonth = new Date(currentChartYear, currentChartMonth + 1, 0).getDate();
+    const dailyIncome = new Array(daysInMonth).fill(0);
+    const dailyExpenses = new Array(daysInMonth).fill(0);
+    
+    monthTransactions.forEach(transaction => {
+        const day = new Date(transaction.date).getDate() - 1; // 0-indexed
+        if (transaction.amount > 0) {
+            dailyIncome[day] += transaction.amount;
+        } else {
+            dailyExpenses[day] += Math.abs(transaction.amount);
+        }
+    });
+    
+    // Create labels (1, 2, 3, ...)
+    const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+    
+    const ctx = document.getElementById('monthly-chart').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (monthlyChart) {
+        monthlyChart.destroy();
+    }
+    
+    monthlyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: dailyIncome,
+                    backgroundColor: '#10b981',
+                    borderRadius: 4
+                },
+                {
+                    label: 'Expenses',
+                    data: dailyExpenses,
+                    backgroundColor: '#ef4444',
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Day of Month'
+                    },
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Amount ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: $${context.raw.toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update weekly trend chart
+function updateTrendChart() {
+    const weeks = parseInt(document.getElementById('trend-period').value);
+    
+    // Calculate data for last N weeks
+    const weeklyData = [];
+    const weekLabels = [];
+    
+    const now = new Date();
+    
+    for (let i = weeks - 1; i >= 0; i--) {
+        const weekStart = new Date(now);
+        weekStart.setDate(weekStart.getDate() - (i * 7));
+        
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        
+        // Calculate weekly net
+        let weeklyNet = 0;
+        transactions.forEach(transaction => {
+            const tDate = new Date(transaction.date);
+            if (tDate >= weekStart && tDate <= weekEnd) {
+                weeklyNet += transaction.amount;
+            }
+        });
+        
+        weeklyData.push(weeklyNet);
+        
+        // Create label (e.g., "Jan 1-7")
+        const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
+        const startDay = weekStart.getDate();
+        const endDay = weekEnd.getDate();
+        weekLabels.push(`${startMonth} ${startDay}-${endDay}`);
+    }
+    
+    const ctx = document.getElementById('trend-chart').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (trendChart) {
+        trendChart.destroy();
+    }
+    
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: weekLabels,
+            datasets: [{
+                label: 'Weekly Net Profit',
+                data: weeklyData,
+                borderColor: '#4361ee',
+                backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                fill: true,
+                tension: 0.3,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Week'
+                    },
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Net Profit ($)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const profit = context.raw;
+                            const profitText = profit >= 0 ? `+$${profit.toFixed(2)}` : `-$${Math.abs(profit).toFixed(2)}`;
+                            return `Net Profit: ${profitText}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Navigate between months
+function navigateMonth(direction) {
+    currentChartMonth += direction;
+    
+    // Handle year wrap-around
+    if (currentChartMonth < 0) {
+        currentChartMonth = 11;
+        currentChartYear--;
+    } else if (currentChartMonth > 11) {
+        currentChartMonth = 0;
+        currentChartYear++;
+    }
+    
+    updateMonthlyChart();
+}
+
+// Filter transactions by time period
+function filterTransactionsByPeriod(period) {
+    const now = new Date();
+    
+    switch(period) {
+        case 'week':
+            const oneWeekAgo = new Date(now);
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            return transactions.filter(t => new Date(t.date) >= oneWeekAgo);
+            
+        case 'month':
+            const oneMonthAgo = new Date(now);
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+            return transactions.filter(t => new Date(t.date) >= oneMonthAgo);
+            
+        case 'all':
+        default:
+            return transactions;
     }
 }
 
-// Utility function to format currency
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-    }).format(amount);
+// ==========================================
+// AI ASSISTANT LOGIC (Design Alternative 3)
+// ==========================================
+
+const aiToggle = document.getElementById('ai-toggle-btn');
+const aiWindow = document.getElementById('ai-chat-window');
+const aiClose = document.getElementById('ai-close-btn');
+const aiInput = document.getElementById('ai-input');
+const aiSend = document.getElementById('ai-send-btn');
+const aiMessages = document.getElementById('ai-messages');
+
+// Check if elements exist (in case HTML wasn't updated yet)
+if (aiToggle) {
+    aiToggle.addEventListener('click', () => aiWindow.style.display = 'flex');
+    aiClose.addEventListener('click', () => aiWindow.style.display = 'none');
+    aiSend.addEventListener('click', handleAiMessage);
+    aiInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleAiMessage(); });
+}
+
+function handleAiMessage() {
+    const text = aiInput.value.trim();
+    if (!text) return;
+
+    addMessage(text, 'user');
+    aiInput.value = '';
+
+    setTimeout(() => {
+        processAiCommand(text);
+    }, 800);
+}
+
+function addMessage(text, sender) {
+    const div = document.createElement('div');
+    div.className = `message ${sender}`;
+    div.textContent = text;
+    aiMessages.appendChild(div);
+    aiMessages.scrollTop = aiMessages.scrollHeight;
+}
+
+function processAiCommand(text) {
+    const lower = text.toLowerCase();
+    let type = 'Other';
+    let category = 'Expense';
+    let amount = 0;
+    let desc = text;
+
+    if (lower.includes('uber') || lower.includes('drive')) type = 'Uber';
+    if (lower.includes('dash') || lower.includes('delivery')) type = 'DoorDash';
+    if (lower.includes('ebay') || lower.includes('sold')) { type = 'eBay'; category = 'Income'; }
+    if (lower.includes('freelance') || lower.includes('project')) { type = 'Freelance'; category = 'Income'; }
+    
+    if (lower.includes('made') || lower.includes('earned') || lower.includes('sold')) category = 'Income';
+    
+    const moneyMatch = text.match(/\$?(\d+(\.\d{1,2})?)/);
+    if (moneyMatch) {
+        amount = parseFloat(moneyMatch[1]);
+    } else {
+        addMessage("I couldn't understand the amount. Try saying 'Made $50 on Uber'.", 'bot');
+        return;
+    }
+
+    if (category === 'Expense' || lower.includes('spent') || lower.includes('gas') || lower.includes('fees') || lower.includes('paid')) {
+        category = 'Expense';
+        amount = -Math.abs(amount);
+        if (lower.includes('gas')) { category = 'Transportation'; desc = 'Gas'; }
+        if (lower.includes('fees')) { category = 'Fees'; }
+    } else {
+        category = 'Income';
+        amount = Math.abs(amount);
+    }
+
+    const newTx = {
+        id: Date.now(),
+        date: new Date().toISOString().split('T')[0],
+        type: type,
+        category: category,
+        amount: amount,
+        description: desc
+    };
+
+    transactions.push(newTx);
+    saveData();
+    renderTable();
+    updateSummary();
+    updateCharts(); // Update charts when AI adds data
+
+    addMessage(`Got it! I logged a ${category} of $${Math.abs(amount)} for ${type}.`, 'bot');
 }

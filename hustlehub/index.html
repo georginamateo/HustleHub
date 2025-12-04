@@ -6,6 +6,8 @@
     <title>HustleHub | Side Gig Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -38,6 +40,55 @@
             <div class="summary-card">
                 <h3><i class="fas fa-receipt"></i> Total Expenses</h3>
                 <p class="amount negative" id="total-expenses">$0.00</p>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="charts-section">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-pie"></i> Income by Gig Type</h3>
+                    <div class="chart-controls">
+                        <select id="chart-period">
+                            <option value="all">All Time</option>
+                            <option value="month">This Month</option>
+                            <option value="week">This Week</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="income-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-bar"></i> Monthly Performance</h3>
+                    <div class="chart-controls">
+                        <button id="prev-month-btn" class="chart-btn"><i class="fas fa-chevron-left"></i></button>
+                        <span id="current-month-label">Jan 2025</span>
+                        <button id="next-month-btn" class="chart-btn"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="monthly-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container full-width">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-line"></i> Weekly Trend</h3>
+                    <div class="chart-controls">
+                        <select id="trend-period">
+                            <option value="4">Last 4 Weeks</option>
+                            <option value="8">Last 8 Weeks</option>
+                            <option value="12">Last 12 Weeks</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="trend-chart"></canvas>
+                </div>
             </div>
         </section>
 
@@ -157,6 +208,29 @@
                 <i class="fas fa-lightbulb"></i> Tip: Track your DoorDash trips, eBay sales, and expenses here to see your true profitability!
             </p>
         </footer>
+    </div>
+
+    <!-- FLOATING AI ASSISTANT (Design Alternative 3) -->
+    <div id="ai-widget" class="ai-widget">
+        <button id="ai-toggle-btn" class="ai-fab">
+            <i class="fas fa-robot"></i>
+        </button>
+        
+        <div id="ai-chat-window" class="ai-chat-window" style="display: none;">
+            <div class="ai-header">
+                <h3>HustleBot 🤖</h3>
+                <button id="ai-close-btn">&times;</button>
+            </div>
+            <div id="ai-messages" class="ai-messages">
+                <div class="message bot">
+                    Hi! I'm your AI Assistant. Tell me what you did today (e.g., "Drove Uber for 3 hours and made $45").
+                </div>
+            </div>
+            <div class="ai-input-area">
+                <input type="text" id="ai-input" placeholder="Type here...">
+                <button id="ai-send-btn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
     </div>
 
     <!-- JavaScript file -->
