@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 3. Try to load data from LocalStorage
     const hasSavedData = loadSavedData();
+    loadCustomItems(); // Load custom gig types and categories
 
     // 4. ONLY if no data was found, load the sample data
     if (!hasSavedData) {
@@ -17,12 +18,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // 5. Render everything
     renderTable();
     updateSummary();
-    updateCharts(); // Initialize charts
 });
 
 // Variables to store transactions
 let transactions = [];
 let editingTransactionId = null;
+
+// Custom items storage
+let customGigTypes = [];
+let customCategories = [];
 
 // Active filters
 let activeFilters = {
@@ -31,15 +35,6 @@ let activeFilters = {
     minAmount: null,
     maxAmount: null
 };
-
-// Chart instances
-let incomeChart = null;
-let monthlyChart = null;
-let trendChart = null;
-
-// Current month for monthly chart
-let currentChartMonth = new Date().getMonth();
-let currentChartYear = new Date().getFullYear();
 
 // Set current date in header
 function setCurrentDate() {
@@ -77,6 +72,18 @@ function addSampleData() {
 
 // Set up all event listeners
 function setupEventListeners() {
+    // Hamburger Menu
+    document.getElementById('hamburger-btn')?.addEventListener('click', toggleHamburgerMenu);
+    document.getElementById('create-item-link')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        showCreateItemModal();
+    });
+
+    // Create Item Modal
+    document.getElementById('close-create-item-btn')?.addEventListener('click', hideCreateItemModal);
+    document.getElementById('cancel-create-item-btn')?.addEventListener('click', hideCreateItemModal);
+    document.getElementById('create-item-form')?.addEventListener('submit', handleCreateItemSubmit);
+
     // Add Row Button
     document.getElementById('add-row-btn').addEventListener('click', showAddForm);
 
@@ -114,12 +121,171 @@ function setupEventListeners() {
             hideFilterModal();
         }
     });
+}
 
-    // Chart Controls
-    document.getElementById('chart-period')?.addEventListener('change', updateCharts);
-    document.getElementById('prev-month-btn')?.addEventListener('click', () => navigateMonth(-1));
-    document.getElementById('next-month-btn')?.addEventListener('click', () => navigateMonth(1));
-    document.getElementById('trend-period')?.addEventListener('change', updateCharts);
+// Hamburger Menu Functions
+function toggleHamburgerMenu() {
+    const hamburger = document.getElementById('hamburger-btn');
+    const menu = document.getElementById('menu-dropdown');
+    hamburger.classList.toggle('active');
+    menu.classList.toggle('active');
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', function(e) {
+    const hamburger = document.getElementById('hamburger-btn');
+    const menu = document.getElementById('menu-dropdown');
+    if (hamburger && menu && !hamburger.contains(e.target) && !menu.contains(e.target)) {
+        hamburger.classList.remove('active');
+        menu.classList.remove('active');
+    }
+});
+
+// Create Item Modal Functions
+function showCreateItemModal() {
+    document.getElementById('create-item-modal').style.display = 'flex';
+    document.getElementById('item-type-select').value = '';
+    document.getElementById('item-name-input').value = '';
+    // Close hamburger menu
+    document.getElementById('hamburger-btn').classList.remove('active');
+    document.getElementById('menu-dropdown').classList.remove('active');
+}
+
+function hideCreateItemModal() {
+    document.getElementById('create-item-modal').style.display = 'none';
+}
+
+function handleCreateItemSubmit(e) {
+    e.preventDefault();
+    
+    const itemType = document.getElementById('item-type-select').value;
+    const itemName = document.getElementById('item-name-input').value.trim();
+    
+    if (!itemName) {
+        alert('Please enter an item name.');
+        return;
+    }
+    
+    if (itemType === 'gigtype') {
+        // Check if already exists
+        const existingGigTypes = ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other', ...customGigTypes];
+        if (existingGigTypes.map(g => g.toLowerCase()).includes(itemName.toLowerCase())) {
+            alert('This Gig Type already exists.');
+            return;
+        }
+        customGigTypes.push(itemName);
+        updateGigTypeOptions();
+        alert(`Gig Type "${itemName}" has been created!`);
+    } else if (itemType === 'category') {
+        // Check if already exists
+        const existingCategories = ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation', ...customCategories];
+        if (existingCategories.map(c => c.toLowerCase()).includes(itemName.toLowerCase())) {
+            alert('This Category already exists.');
+            return;
+        }
+        customCategories.push(itemName);
+        updateCategoryOptions();
+        alert(`Category "${itemName}" has been created!`);
+    }
+    
+    saveCustomItems();
+    hideCreateItemModal();
+}
+
+function updateGigTypeOptions() {
+    const typeSelect = document.getElementById('type-select');
+    const filterCheckboxes = document.querySelector('.gig-type-filter')?.parentElement.parentElement;
+    
+    // Update transaction form dropdown
+    const currentValue = typeSelect.value;
+    typeSelect.innerHTML = '<option value="">Select gig type...</option>';
+    
+    const allGigTypes = ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other', ...customGigTypes];
+    allGigTypes.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        typeSelect.appendChild(option);
+    });
+    typeSelect.value = currentValue;
+    
+    // Update filter checkboxes
+    if (filterCheckboxes) {
+        filterCheckboxes.innerHTML = '';
+        allGigTypes.forEach(type => {
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'gig-type-filter';
+            checkbox.value = type;
+            checkbox.checked = activeFilters.gigTypes.includes(type);
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(' ' + type));
+            filterCheckboxes.appendChild(label);
+        });
+    }
+}
+
+function updateCategoryOptions() {
+    const categorySelect = document.getElementById('category-select');
+    const filterCheckboxes = document.querySelector('.category-filter')?.parentElement.parentElement;
+    
+    // Update transaction form dropdown
+    const currentValue = categorySelect.value;
+    categorySelect.innerHTML = '<option value="">Select category...</option>';
+    
+    const allCategories = ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation', ...customCategories];
+    allCategories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categorySelect.appendChild(option);
+    });
+    categorySelect.value = currentValue;
+    
+    // Update filter checkboxes
+    if (filterCheckboxes) {
+        filterCheckboxes.innerHTML = '';
+        allCategories.forEach(category => {
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'category-filter';
+            checkbox.value = category;
+            checkbox.checked = activeFilters.categories.includes(category);
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(' ' + category));
+            filterCheckboxes.appendChild(label);
+        });
+    }
+}
+
+function saveCustomItems() {
+    localStorage.setItem('hustlehub-custom-gig-types', JSON.stringify(customGigTypes));
+    localStorage.setItem('hustlehub-custom-categories', JSON.stringify(customCategories));
+}
+
+function loadCustomItems() {
+    const savedGigTypes = localStorage.getItem('hustlehub-custom-gig-types');
+    const savedCategories = localStorage.getItem('hustlehub-custom-categories');
+    
+    if (savedGigTypes) {
+        try {
+            customGigTypes = JSON.parse(savedGigTypes);
+            updateGigTypeOptions();
+        } catch (error) {
+            console.error('Error loading custom gig types:', error);
+        }
+    }
+    
+    if (savedCategories) {
+        try {
+            customCategories = JSON.parse(savedCategories);
+            updateCategoryOptions();
+        } catch (error) {
+            console.error('Error loading custom categories:', error);
+        }
+    }
 }
 
 // Show the add transaction form
@@ -207,7 +373,6 @@ function handleFormSubmit(e) {
     saveData();
     renderTable();
     updateSummary();
-    updateCharts(); // Update charts when data is added/edited
     hideAddForm();
 }
 
@@ -314,7 +479,6 @@ function deleteTransaction(id) {
         saveData();
         renderTable();
         updateSummary();
-        updateCharts(); // Update charts when data is deleted
     }
 }
 
@@ -329,7 +493,6 @@ function clearAllTransactions() {
         saveData();
         renderTable();
         updateSummary();
-        updateCharts(); // Update charts when all data is cleared
     }
 }
 
@@ -420,12 +583,8 @@ function resetFilters() {
 
 function updateSummary() {
     if (transactions.length === 0) {
-        document.getElementById('weekly-net').textContent = '$0.00';
-        document.getElementById('monthly-net').textContent = '$0.00';
         document.getElementById('total-income').textContent = '$0.00';
         document.getElementById('total-expenses').textContent = '$0.00';
-        document.getElementById('weekly-net').className = 'amount';
-        document.getElementById('monthly-net').className = 'amount';
         return;
     }
 
@@ -440,31 +599,8 @@ function updateSummary() {
         }
     });
 
-    // Calculate weekly net (last 7 days)
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    let weeklyNet = 0;
-
-    // Calculate monthly net (last 30 days)
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-    let monthlyNet = 0;
-
-    transactions.forEach(transaction => {
-        const tDate = new Date(transaction.date);
-        const adjustedDate = new Date(tDate.getTime() + (tDate.getTimezoneOffset() * 60000));
-
-        if (adjustedDate >= oneWeekAgo) weeklyNet += transaction.amount;
-        if (adjustedDate >= oneMonthAgo) monthlyNet += transaction.amount;
-    });
-
-    document.getElementById('weekly-net').textContent = `$${weeklyNet.toFixed(2)}`;
-    document.getElementById('monthly-net').textContent = `$${monthlyNet.toFixed(2)}`;
     document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
     document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
-
-    document.getElementById('weekly-net').className = weeklyNet >= 0 ? 'amount positive' : 'amount negative';
-    document.getElementById('monthly-net').className = monthlyNet >= 0 ? 'amount positive' : 'amount negative';
 }
 
 // Save data to localStorage
@@ -486,320 +622,6 @@ function loadSavedData() {
         }
     }
     return false;
-}
-
-// ==========================================
-// CHART FUNCTIONS
-// ==========================================
-
-// Update all charts
-function updateCharts() {
-    updateIncomeChart();
-    updateMonthlyChart();
-    updateTrendChart();
-}
-
-// Update income by gig type chart
-function updateIncomeChart() {
-    const period = document.getElementById('chart-period').value;
-    const filteredTransactions = filterTransactionsByPeriod(period);
-    
-    // Group income by gig type
-    const incomeByType = {};
-    
-    filteredTransactions.forEach(transaction => {
-        if (transaction.amount > 0) { // Only income
-            if (!incomeByType[transaction.type]) {
-                incomeByType[transaction.type] = 0;
-            }
-            incomeByType[transaction.type] += transaction.amount;
-        }
-    });
-    
-    const types = Object.keys(incomeByType);
-    const amounts = Object.values(incomeByType);
-    
-    // Colors for chart
-    const colors = [
-        '#4361ee',
-        '#10b981',
-        '#f59e0b',
-        '#ef4444',
-        '#8b5cf6',
-    ];
-    
-    const ctx = document.getElementById('income-chart').getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (incomeChart) {
-        incomeChart.destroy();
-    }
-    
-    incomeChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: types,
-            datasets: [{
-                data: amounts,
-                backgroundColor: colors.slice(0, types.length),
-                borderColor: 'white',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true,
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const value = context.raw;
-                            const total = amounts.reduce((a, b) => a + b, 0);
-                            const percentage = Math.round((value / total) * 100);
-                            return `${context.label}: $${value.toFixed(2)} (${percentage}%)`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Update monthly performance chart
-function updateMonthlyChart() {
-    // Update month label
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    document.getElementById('current-month-label').textContent = 
-        `${monthNames[currentChartMonth]} ${currentChartYear}`;
-    
-    // Get transactions for current month
-    const monthTransactions = transactions.filter(transaction => {
-        const date = new Date(transaction.date);
-        return date.getMonth() === currentChartMonth && 
-               date.getFullYear() === currentChartYear;
-    });
-    
-    // Group by day
-    const daysInMonth = new Date(currentChartYear, currentChartMonth + 1, 0).getDate();
-    const dailyIncome = new Array(daysInMonth).fill(0);
-    const dailyExpenses = new Array(daysInMonth).fill(0);
-    
-    monthTransactions.forEach(transaction => {
-        const day = new Date(transaction.date).getDate() - 1; // 0-indexed
-        if (transaction.amount > 0) {
-            dailyIncome[day] += transaction.amount;
-        } else {
-            dailyExpenses[day] += Math.abs(transaction.amount);
-        }
-    });
-    
-    // Create labels (1, 2, 3, ...)
-    const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
-    
-    const ctx = document.getElementById('monthly-chart').getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (monthlyChart) {
-        monthlyChart.destroy();
-    }
-    
-    monthlyChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Income',
-                    data: dailyIncome,
-                    backgroundColor: '#10b981',
-                    borderRadius: 4
-                },
-                {
-                    label: 'Expenses',
-                    data: dailyExpenses,
-                    backgroundColor: '#ef4444',
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Day of Month'
-                    },
-                    grid: {
-                        display: false
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Amount ($)'
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value;
-                        }
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.dataset.label}: $${context.raw.toFixed(2)}`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Update weekly trend chart
-function updateTrendChart() {
-    const weeks = parseInt(document.getElementById('trend-period').value);
-    
-    // Calculate data for last N weeks
-    const weeklyData = [];
-    const weekLabels = [];
-    
-    const now = new Date();
-    
-    for (let i = weeks - 1; i >= 0; i--) {
-        const weekStart = new Date(now);
-        weekStart.setDate(weekStart.getDate() - (i * 7));
-        
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        
-        // Calculate weekly net
-        let weeklyNet = 0;
-        transactions.forEach(transaction => {
-            const tDate = new Date(transaction.date);
-            if (tDate >= weekStart && tDate <= weekEnd) {
-                weeklyNet += transaction.amount;
-            }
-        });
-        
-        weeklyData.push(weeklyNet);
-        
-        // Create label (e.g., "Jan 1-7")
-        const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
-        const startDay = weekStart.getDate();
-        const endDay = weekEnd.getDate();
-        weekLabels.push(`${startMonth} ${startDay}-${endDay}`);
-    }
-    
-    const ctx = document.getElementById('trend-chart').getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (trendChart) {
-        trendChart.destroy();
-    }
-    
-    trendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: weekLabels,
-            datasets: [{
-                label: 'Weekly Net Profit',
-                data: weeklyData,
-                borderColor: '#4361ee',
-                backgroundColor: 'rgba(67, 97, 238, 0.1)',
-                fill: true,
-                tension: 0.3,
-                borderWidth: 3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Week'
-                    },
-                    grid: {
-                        display: false
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Net Profit ($)'
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value;
-                        }
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const profit = context.raw;
-                            const profitText = profit >= 0 ? `+$${profit.toFixed(2)}` : `-$${Math.abs(profit).toFixed(2)}`;
-                            return `Net Profit: ${profitText}`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Navigate between months
-function navigateMonth(direction) {
-    currentChartMonth += direction;
-    
-    // Handle year wrap-around
-    if (currentChartMonth < 0) {
-        currentChartMonth = 11;
-        currentChartYear--;
-    } else if (currentChartMonth > 11) {
-        currentChartMonth = 0;
-        currentChartYear++;
-    }
-    
-    updateMonthlyChart();
-}
-
-// Filter transactions by time period
-function filterTransactionsByPeriod(period) {
-    const now = new Date();
-    
-    switch(period) {
-        case 'week':
-            const oneWeekAgo = new Date(now);
-            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            return transactions.filter(t => new Date(t.date) >= oneWeekAgo);
-            
-        case 'month':
-            const oneMonthAgo = new Date(now);
-            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-            return transactions.filter(t => new Date(t.date) >= oneMonthAgo);
-            
-        case 'all':
-        default:
-            return transactions;
-    }
 }
 
 // ==========================================
@@ -886,7 +708,6 @@ function processAiCommand(text) {
     saveData();
     renderTable();
     updateSummary();
-    updateCharts(); // Update charts when AI adds data
 
     addMessage(`Got it! I logged a ${category} of $${Math.abs(amount)} for ${type}.`, 'bot');
 }

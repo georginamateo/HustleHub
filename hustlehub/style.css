@@ -30,6 +30,88 @@ body {
     padding: 20px 30px;
     background: linear-gradient(135deg, #4361ee, #3a0ca3);
     color: white;
+    position: relative;
+}
+
+/* Hamburger Menu */
+.hamburger-menu {
+    position: relative;
+    z-index: 1500;
+}
+
+.hamburger {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+}
+
+.hamburger .bar {
+    width: 25px;
+    height: 3px;
+    background-color: white;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.hamburger.active .bar:nth-child(1) {
+    transform: rotate(45deg) translate(8px, 8px);
+}
+
+.hamburger.active .bar:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger.active .bar:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -7px);
+}
+
+.menu-dropdown {
+    position: absolute;
+    top: 60px;
+    left: 0;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    min-width: 200px;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.menu-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.menu-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 20px;
+    color: #333;
+    text-decoration: none;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.menu-dropdown a:last-child {
+    border-bottom: none;
+}
+
+.menu-dropdown a:hover {
+    background-color: #f8f9fa;
+}
+
+.menu-dropdown a i {
+    color: #4361ee;
+    font-size: 1.1rem;
 }
 
 .logo {
@@ -57,6 +139,23 @@ body {
 .date-display p {
     font-size: 1.1rem;
     font-weight: 500;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.back-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 /* Summary Dashboard */
@@ -104,6 +203,28 @@ body {
 
 .negative {
     color: #ef4444;
+}
+
+/* Net Worth Specific Styles */
+.networth-card {
+    min-width: 300px;
+}
+
+.breakdown {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eaeaea;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 0.95rem;
+}
+
+.breakdown-item span:first-child {
+    color: #6c757d;
 }
 
 /* Charts Section */

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Net Worth | HustleHub</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-chart-area"></i>
+                <h1>Net Worth Dashboard</h1>
+            </div>
+            <div class="date-display">
+                <a href="index.html" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </header>
+
+        <!-- Net Worth Summary -->
+        <section class="dashboard-summary">
+            <div class="summary-card networth-card">
+                <h3><i class="fas fa-calendar-alt"></i> Monthly Net</h3>
+                <p class="amount" id="monthly-net">$0.00</p>
+                <div class="breakdown">
+                    <div class="breakdown-item">
+                        <span>Income:</span>
+                        <span class="positive" id="monthly-income">$0.00</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span>Expenses:</span>
+                        <span class="negative" id="monthly-expenses">$0.00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-card networth-card">
+                <h3><i class="fas fa-calendar-week"></i> Weekly Net</h3>
+                <p class="amount" id="weekly-net">$0.00</p>
+                <div class="breakdown">
+                    <div class="breakdown-item">
+                        <span>Income:</span>
+                        <span class="positive" id="weekly-income">$0.00</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span>Expenses:</span>
+                        <span class="negative" id="weekly-expenses">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="charts-section">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-pie"></i> Income by Gig Type</h3>
+                    <div class="chart-controls">
+                        <select id="gig-type-filter">
+                            <option value="all">All Gig Types</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="income-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-bar"></i> Monthly Performance</h3>
+                    <div class="chart-controls">
+                        <button id="prev-month-btn" class="chart-btn"><i class="fas fa-chevron-left"></i></button>
+                        <span id="current-month-label">Jan 2025</span>
+                        <button id="next-month-btn" class="chart-btn"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="monthly-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container full-width">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-line"></i> Weekly Trend</h3>
+                    <div class="chart-controls">
+                        <select id="trend-period">
+                            <option value="4">Last 4 Weeks</option>
+                            <option value="8">Last 8 Weeks</option>
+                            <option value="12">Last 12 Weeks</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="trend-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>CS 4875: Human Centered Computing | Fall 2025 | Group 09 - HustleHub</p>
+        </footer>
+    </div>
+
+    <script>
+        // Load transactions from localStorage
+        let transactions = [];
+        const savedData = localStorage.getItem('hustlehub-transactions');
+        if (savedData) {
+            try {
+                transactions = JSON.parse(savedData);
+            } catch (error) {
+                console.error('Error loading saved data:', error);
+            }
+        }
+
+        // Chart instances
+        let incomeChart = null;
+        let monthlyChart = null;
+        let trendChart = null;
+
+        // Current month for monthly chart
+        let currentChartMonth = new Date().getMonth();
+        let currentChartYear = new Date().getFullYear();
+
+        // Calculate and display net worth
+        function calculateNetWorth() {
+            if (transactions.length === 0) {
+                return;
+            }
+
+            // Calculate weekly net (last 7 days)
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            let weeklyNet = 0;
+            let weeklyIncome = 0;
+            let weeklyExpenses = 0;
+
+            // Calculate monthly net (last 30 days)
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+            let monthlyNet = 0;
+            let monthlyIncome = 0;
+            let monthlyExpenses = 0;
+
+            transactions.forEach(transaction => {
+                const tDate = new Date(transaction.date);
+                const adjustedDate = new Date(tDate.getTime() + (tDate.getTimezoneOffset() * 60000));
+
+                if (adjustedDate >= oneWeekAgo) {
+                    weeklyNet += transaction.amount;
+                    if (transaction.amount > 0) {
+                        weeklyIncome += transaction.amount;
+                    } else {
+                        weeklyExpenses += Math.abs(transaction.amount);
+                    }
+                }
+                
+                if (adjustedDate >= oneMonthAgo) {
+                    monthlyNet += transaction.amount;
+                    if (transaction.amount > 0) {
+                        monthlyIncome += transaction.amount;
+                    } else {
+                        monthlyExpenses += Math.abs(transaction.amount);
+                    }
+                }
+            });
+
+            document.getElementById('weekly-net').textContent = `$${weeklyNet.toFixed(2)}`;
+            document.getElementById('weekly-net').className = weeklyNet >= 0 ? 'amount positive' : 'amount negative';
+            document.getElementById('weekly-income').textContent = `$${weeklyIncome.toFixed(2)}`;
+            document.getElementById('weekly-expenses').textContent = `$${weeklyExpenses.toFixed(2)}`;
+
+            document.getElementById('monthly-net').textContent = `$${monthlyNet.toFixed(2)}`;
+            document.getElementById('monthly-net').className = monthlyNet >= 0 ? 'amount positive' : 'amount negative';
+            document.getElementById('monthly-income').textContent = `$${monthlyIncome.toFixed(2)}`;
+            document.getElementById('monthly-expenses').textContent = `$${monthlyExpenses.toFixed(2)}`;
+        }
+
+        // Populate gig type filter dropdown
+        function populateGigTypeFilter() {
+            const gigTypes = new Set();
+            transactions.forEach(transaction => {
+                if (transaction.amount > 0) { // Only income transactions
+                    gigTypes.add(transaction.type);
+                }
+            });
+            
+            const gigTypeFilter = document.getElementById('gig-type-filter');
+            gigTypeFilter.innerHTML = '<option value="all">All Gig Types</option>';
+            
+            Array.from(gigTypes).sort().forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                gigTypeFilter.appendChild(option);
+            });
+        }
+
+        // Update income by gig type chart
+        function updateIncomeChart() {
+            const selectedGigType = document.getElementById('gig-type-filter').value;
+            
+            const incomeByType = {};
+            
+            transactions.forEach(transaction => {
+                if (transaction.amount > 0) {
+                    // Filter by selected gig type if not "all"
+                    if (selectedGigType === 'all' || transaction.type === selectedGigType) {
+                        if (!incomeByType[transaction.type]) {
+                            incomeByType[transaction.type] = 0;
+                        }
+                        incomeByType[transaction.type] += transaction.amount;
+                    }
+                }
+            });
+            
+            const types = Object.keys(incomeByType);
+            const amounts = Object.values(incomeByType);
+            
+            const colors = ['#4361ee', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+            
+            const ctx = document.getElementById('income-chart').getContext('2d');
+            
+            if (incomeChart) {
+                incomeChart.destroy();
+            }
+            
+            incomeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: types,
+                    datasets: [{
+                        data: amounts,
+                        backgroundColor: colors.slice(0, types.length),
+                        borderColor: 'white',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const total = amounts.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${context.label}: $${value.toFixed(2)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update monthly performance chart
+        function updateMonthlyChart() {
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                               'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            document.getElementById('current-month-label').textContent = 
+                `${monthNames[currentChartMonth]} ${currentChartYear}`;
+            
+            const monthTransactions = transactions.filter(transaction => {
+                const date = new Date(transaction.date);
+                return date.getMonth() === currentChartMonth && 
+                       date.getFullYear() === currentChartYear;
+            });
+            
+            const daysInMonth = new Date(currentChartYear, currentChartMonth + 1, 0).getDate();
+            const dailyIncome = new Array(daysInMonth).fill(0);
+            const dailyExpenses = new Array(daysInMonth).fill(0);
+            
+            monthTransactions.forEach(transaction => {
+                const day = new Date(transaction.date).getDate() - 1;
+                if (transaction.amount > 0) {
+                    dailyIncome[day] += transaction.amount;
+                } else {
+                    dailyExpenses[day] += Math.abs(transaction.amount);
+                }
+            });
+            
+            const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+            
+            const ctx = document.getElementById('monthly-chart').getContext('2d');
+            
+            if (monthlyChart) {
+                monthlyChart.destroy();
+            }
+            
+            monthlyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: dailyIncome,
+                            backgroundColor: '#10b981',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Expenses',
+                            data: dailyExpenses,
+                            backgroundColor: '#ef4444',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Day of Month'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Amount ($)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: $${context.raw.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update weekly trend chart
+        function updateTrendChart() {
+            const weeks = parseInt(document.getElementById('trend-period').value);
+            
+            const weeklyData = [];
+            const weekLabels = [];
+            
+            const now = new Date();
+            
+            for (let i = weeks - 1; i >= 0; i--) {
+                const weekStart = new Date(now);
+                weekStart.setDate(weekStart.getDate() - (i * 7));
+                
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                
+                let weeklyNet = 0;
+                transactions.forEach(transaction => {
+                    const tDate = new Date(transaction.date);
+                    if (tDate >= weekStart && tDate <= weekEnd) {
+                        weeklyNet += transaction.amount;
+                    }
+                });
+                
+                weeklyData.push(weeklyNet);
+                
+                const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
+                const startDay = weekStart.getDate();
+                const endDay = weekEnd.getDate();
+                weekLabels.push(`${startMonth} ${startDay}-${endDay}`);
+            }
+            
+            const ctx = document.getElementById('trend-chart').getContext('2d');
+            
+            if (trendChart) {
+                trendChart.destroy();
+            }
+            
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: weekLabels,
+                    datasets: [{
+                        label: 'Weekly Net Profit',
+                        data: weeklyData,
+                        borderColor: '#4361ee',
+                        backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Week'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Net Profit ($)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const profit = context.raw;
+                                    const profitText = profit >= 0 ? `+$${profit.toFixed(2)}` : `-$${Math.abs(profit).toFixed(2)}`;
+                                    return `Net Profit: ${profitText}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Navigate between months
+        function navigateMonth(direction) {
+            currentChartMonth += direction;
+            
+            if (currentChartMonth < 0) {
+                currentChartMonth = 11;
+                currentChartYear--;
+            } else if (currentChartMonth > 11) {
+                currentChartMonth = 0;
+                currentChartYear++;
+            }
+            
+            updateMonthlyChart();
+        }
+
+        // Update all charts
+        function updateCharts() {
+            updateIncomeChart();
+            updateMonthlyChart();
+            updateTrendChart();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateNetWorth();
+            populateGigTypeFilter();
+            updateCharts();
+
+            // Event listeners
+            document.getElementById('gig-type-filter')?.addEventListener('change', updateIncomeChart);
+            document.getElementById('prev-month-btn')?.addEventListener('click', () => navigateMonth(-1));
+            document.getElementById('next-month-btn')?.addEventListener('click', () => navigateMonth(1));
+            document.getElementById('trend-period')?.addEventListener('change', updateCharts);
+        });
+    </script>
+</body>
+</html>
