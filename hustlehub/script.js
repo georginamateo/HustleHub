@@ -7,15 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setCurrentDate();
 
     // 3. Try to load data from LocalStorage
-    const hasSavedData = loadSavedData();
-    loadCustomItems(); // Load custom gig types and categories
+    loadSavedData();
+    loadCustomItems(); // Load custom gig types and categories (this will call update functions)
 
-    // 4. ONLY if no data was found, load the sample data
-    if (!hasSavedData) {
-        addSampleData();
-    }
-
-    // 5. Render everything
+    // 4. Render everything
     renderTable();
     updateSummary();
 });
@@ -43,33 +38,6 @@ function setCurrentDate() {
     document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
 }
 
-// Add sample data for demo (Only runs if storage is empty)
-function addSampleData() {
-    // Generate sample data for multiple months
-    const sampleTransactions = [
-        // January 2025
-        { id: 1, date: '2025-01-15', type: 'DoorDash', category: 'Income', amount: 45.20, description: 'Lunch deliveries' },
-        { id: 2, date: '2025-01-16', type: 'DoorDash', category: 'Income', amount: 37.20, description: 'Dinner shift' },
-        { id: 3, date: '2025-01-18', type: 'Uber', category: 'Income', amount: 68.50, description: 'Airport trip' },
-        { id: 4, date: '2025-01-19', type: 'Other', category: 'Expense', amount: -56.00, description: 'Gas refill' },
-        { id: 5, date: '2025-01-20', type: 'eBay', category: 'Income', amount: 100.50, description: 'Sold vintage jacket' },
-        { id: 6, date: '2025-01-21', type: 'eBay', category: 'Fees', amount: -12.00, description: 'eBay seller fee' },
-        
-        // February 2025
-        { id: 7, date: '2025-02-10', type: 'DoorDash', category: 'Income', amount: 52.30, description: 'Weekend deliveries' },
-        { id: 8, date: '2025-02-15', type: 'Uber', category: 'Income', amount: 72.80, description: 'Evening rides' },
-        { id: 9, date: '2025-02-20', type: 'Freelance', category: 'Income', amount: 200.00, description: 'Web design project' },
-        { id: 10, date: '2025-02-22', type: 'Other', category: 'Expense', amount: -45.00, description: 'Phone bill' },
-        
-        // December 2024
-        { id: 11, date: '2024-12-05', type: 'eBay', category: 'Income', amount: 85.00, description: 'Sold old books' },
-        { id: 12, date: '2024-12-20', type: 'Uber', category: 'Income', amount: 95.25, description: 'Holiday trips' },
-    ];
-
-    transactions = sampleTransactions;
-    saveData(); // Save these immediately so they persist
-}
-
 // Set up all event listeners
 function setupEventListeners() {
     // Hamburger Menu
@@ -78,21 +46,47 @@ function setupEventListeners() {
         e.preventDefault();
         showCreateItemModal();
     });
+    document.getElementById('delete-item-link')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        showDeleteItemModal();
+    });
 
     // Create Item Modal
     document.getElementById('close-create-item-btn')?.addEventListener('click', hideCreateItemModal);
     document.getElementById('cancel-create-item-btn')?.addEventListener('click', hideCreateItemModal);
     document.getElementById('create-item-form')?.addEventListener('submit', handleCreateItemSubmit);
 
+    // Delete Item Modal
+    document.getElementById('close-delete-item-btn')?.addEventListener('click', hideDeleteItemModal);
+    document.getElementById('cancel-delete-item-btn')?.addEventListener('click', hideDeleteItemModal);
+    document.getElementById('delete-item-form')?.addEventListener('submit', handleDeleteItemSubmit);
+    document.getElementById('delete-item-type-select')?.addEventListener('change', updateDeleteItemOptions);
+
     // Add Row Button
-    document.getElementById('add-row-btn').addEventListener('click', showAddForm);
+    const addRowBtn = document.getElementById('add-row-btn');
+    if (addRowBtn) {
+        addRowBtn.addEventListener('click', showAddForm);
+    } else {
+        console.error('Add New Transaction button not found');
+    }
 
     // Close Modal Buttons
-    document.getElementById('close-modal-btn').addEventListener('click', hideAddForm);
-    document.getElementById('cancel-btn').addEventListener('click', hideAddForm);
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', hideAddForm);
+    }
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', hideAddForm);
+    }
 
     // Form Submission
-    document.getElementById('transaction-form').addEventListener('submit', handleFormSubmit);
+    const transactionForm = document.getElementById('transaction-form');
+    if (transactionForm) {
+        transactionForm.addEventListener('submit', handleFormSubmit);
+    } else {
+        console.error('transaction-form not found');
+    }
 
     // Clear All Button
     document.getElementById('clear-btn').addEventListener('click', clearAllTransactions);
@@ -103,11 +97,14 @@ function setupEventListeners() {
     });
 
     // Close modal when clicking outside
-    document.getElementById('add-form-modal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            hideAddForm();
-        }
-    });
+    const addFormModal = document.getElementById('add-form-modal');
+    if (addFormModal) {
+        addFormModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideAddForm();
+            }
+        });
+    }
 
     // Filter controls
     document.getElementById('filter-toggle-btn')?.addEventListener('click', showFilterModal);
@@ -192,9 +189,121 @@ function handleCreateItemSubmit(e) {
     hideCreateItemModal();
 }
 
+// Delete Item Modal Functions
+function showDeleteItemModal() {
+    document.getElementById('delete-item-modal').style.display = 'flex';
+    document.getElementById('delete-item-type-select').value = '';
+    document.getElementById('delete-item-select-group').style.display = 'none';
+    // Close hamburger menu
+    document.getElementById('hamburger-btn').classList.remove('active');
+    document.getElementById('menu-dropdown').classList.remove('active');
+}
+
+function hideDeleteItemModal() {
+    document.getElementById('delete-item-modal').style.display = 'none';
+}
+
+function updateDeleteItemOptions() {
+    const itemType = document.getElementById('delete-item-type-select').value;
+    const selectGroup = document.getElementById('delete-item-select-group');
+    const itemSelect = document.getElementById('delete-item-name-select');
+    
+    if (!itemType) {
+        selectGroup.style.display = 'none';
+        return;
+    }
+    
+    selectGroup.style.display = 'block';
+    itemSelect.innerHTML = '<option value="">Select item...</option>';
+    
+    if (itemType === 'gigtype') {
+        if (customGigTypes.length === 0) {
+            itemSelect.innerHTML = '<option value="">No custom gig types to delete</option>';
+            return;
+        }
+        customGigTypes.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            itemSelect.appendChild(option);
+        });
+    } else if (itemType === 'category') {
+        if (customCategories.length === 0) {
+            itemSelect.innerHTML = '<option value="">No custom categories to delete</option>';
+            return;
+        }
+        customCategories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            itemSelect.appendChild(option);
+        });
+    }
+}
+
+function handleDeleteItemSubmit(e) {
+    e.preventDefault();
+    
+    const itemType = document.getElementById('delete-item-type-select').value;
+    const itemName = document.getElementById('delete-item-name-select').value;
+    
+    if (!itemName || itemName === 'No custom gig types to delete' || itemName === 'No custom categories to delete') {
+        return;
+    }
+    
+    const confirmDelete = confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`);
+    if (!confirmDelete) {
+        return;
+    }
+    
+    if (itemType === 'gigtype') {
+        // Check if any transactions use this gig type
+        const transactionsWithType = transactions.filter(t => t.type === itemName);
+        if (transactionsWithType.length > 0) {
+            const confirmWithTransactions = confirm(
+                `Warning: ${transactionsWithType.length} transaction(s) use this gig type. ` +
+                `Deleting it will not remove these transactions, but you won't be able to create new ones with this type. ` +
+                `Continue with deletion?`
+            );
+            if (!confirmWithTransactions) {
+                return;
+            }
+        }
+        
+        customGigTypes = customGigTypes.filter(type => type !== itemName);
+        updateGigTypeOptions();
+        alert(`Gig Type "${itemName}" has been deleted!`);
+    } else if (itemType === 'category') {
+        // Check if any transactions use this category
+        const transactionsWithCategory = transactions.filter(t => t.category === itemName);
+        if (transactionsWithCategory.length > 0) {
+            const confirmWithTransactions = confirm(
+                `Warning: ${transactionsWithCategory.length} transaction(s) use this category. ` +
+                `Deleting it will not remove these transactions, but you won't be able to create new ones with this category. ` +
+                `Continue with deletion?`
+            );
+            if (!confirmWithTransactions) {
+                return;
+            }
+        }
+        
+        customCategories = customCategories.filter(category => category !== itemName);
+        updateCategoryOptions();
+        alert(`Category "${itemName}" has been deleted!`);
+    }
+    
+    saveCustomItems();
+    hideDeleteItemModal();
+}
+
 function updateGigTypeOptions() {
     const typeSelect = document.getElementById('type-select');
-    const filterCheckboxes = document.querySelector('.gig-type-filter')?.parentElement.parentElement;
+    if (!typeSelect) {
+        console.error('type-select element not found');
+        return;
+    }
+    
+    const filterCheckboxContainer = document.querySelector('.gig-type-filter')?.parentElement.parentElement;
     
     // Update transaction form dropdown
     const currentValue = typeSelect.value;
@@ -209,9 +318,9 @@ function updateGigTypeOptions() {
     });
     typeSelect.value = currentValue;
     
-    // Update filter checkboxes
-    if (filterCheckboxes) {
-        filterCheckboxes.innerHTML = '';
+    // Update filter checkboxes - clear and rebuild all
+    if (filterCheckboxContainer) {
+        filterCheckboxContainer.innerHTML = '';
         allGigTypes.forEach(type => {
             const label = document.createElement('label');
             const checkbox = document.createElement('input');
@@ -221,14 +330,19 @@ function updateGigTypeOptions() {
             checkbox.checked = activeFilters.gigTypes.includes(type);
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(' ' + type));
-            filterCheckboxes.appendChild(label);
+            filterCheckboxContainer.appendChild(label);
         });
     }
 }
 
 function updateCategoryOptions() {
     const categorySelect = document.getElementById('category-select');
-    const filterCheckboxes = document.querySelector('.category-filter')?.parentElement.parentElement;
+    if (!categorySelect) {
+        console.error('category-select element not found');
+        return;
+    }
+    
+    const filterCheckboxContainer = document.querySelector('.category-filter')?.parentElement.parentElement;
     
     // Update transaction form dropdown
     const currentValue = categorySelect.value;
@@ -243,9 +357,9 @@ function updateCategoryOptions() {
     });
     categorySelect.value = currentValue;
     
-    // Update filter checkboxes
-    if (filterCheckboxes) {
-        filterCheckboxes.innerHTML = '';
+    // Update filter checkboxes - clear and rebuild all
+    if (filterCheckboxContainer) {
+        filterCheckboxContainer.innerHTML = '';
         allCategories.forEach(category => {
             const label = document.createElement('label');
             const checkbox = document.createElement('input');
@@ -255,7 +369,7 @@ function updateCategoryOptions() {
             checkbox.checked = activeFilters.categories.includes(category);
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(' ' + category));
-            filterCheckboxes.appendChild(label);
+            filterCheckboxContainer.appendChild(label);
         });
     }
 }
@@ -272,7 +386,6 @@ function loadCustomItems() {
     if (savedGigTypes) {
         try {
             customGigTypes = JSON.parse(savedGigTypes);
-            updateGigTypeOptions();
         } catch (error) {
             console.error('Error loading custom gig types:', error);
         }
@@ -281,47 +394,80 @@ function loadCustomItems() {
     if (savedCategories) {
         try {
             customCategories = JSON.parse(savedCategories);
-            updateCategoryOptions();
         } catch (error) {
             console.error('Error loading custom categories:', error);
         }
     }
+    
+    // Update options after loading
+    updateGigTypeOptions();
+    updateCategoryOptions();
 }
 
 // Show the add transaction form
 function showAddForm(transactionId = null) {
     editingTransactionId = transactionId;
-    document.getElementById('add-form-modal').style.display = 'flex';
+    
+    const modal = document.getElementById('add-form-modal');
+    if (!modal) {
+        console.error('add-form-modal element not found');
+        alert('Error: Transaction form modal not found. Please refresh the page.');
+        return;
+    }
+    
+    // Show modal
+    modal.style.display = 'flex';
+    
+    // Get form elements
+    const modalHeader = document.querySelector('#add-form-modal .modal-header h2');
+    const dateInput = document.getElementById('date-input');
+    const typeSelect = document.getElementById('type-select');
+    const categorySelect = document.getElementById('category-select');
+    const amountInput = document.getElementById('amount-input');
+    const descriptionInput = document.getElementById('description-input');
+    const submitButton = document.querySelector('#transaction-form button[type="submit"]');
+    
+    // Check if all elements exist
+    if (!modalHeader || !dateInput || !typeSelect || !categorySelect || !amountInput || !descriptionInput || !submitButton) {
+        console.error('Some form elements are missing');
+        alert('Error: Form elements not found. Please refresh the page.');
+        return;
+    }
     
     if (transactionId) {
         // Edit mode - populate form with existing data
         const transaction = transactions.find(t => t.id === transactionId);
         if (transaction) {
-            document.querySelector('.modal-header h2').innerHTML = '<i class="fas fa-edit"></i> Edit Transaction';
-            document.getElementById('date-input').value = transaction.date;
-            document.getElementById('type-select').value = transaction.type;
-            document.getElementById('category-select').value = transaction.category;
-            document.getElementById('amount-input').value = Math.abs(transaction.amount).toFixed(2);
-            document.getElementById('description-input').value = transaction.description;
-            document.querySelector('.form-actions button[type="submit"]').innerHTML = '<i class="fas fa-check"></i> Update Transaction';
+            modalHeader.innerHTML = '<i class="fas fa-edit"></i> Edit Transaction';
+            dateInput.value = transaction.date;
+            typeSelect.value = transaction.type;
+            categorySelect.value = transaction.category;
+            amountInput.value = Math.abs(transaction.amount).toFixed(2);
+            descriptionInput.value = transaction.description;
+            submitButton.innerHTML = '<i class="fas fa-check"></i> Update Transaction';
         }
     } else {
         // Add mode - reset form
-        document.querySelector('.modal-header h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Transaction';
+        modalHeader.innerHTML = '<i class="fas fa-plus-circle"></i> Add New Transaction';
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date-input').value = today;
-        document.getElementById('type-select').value = '';
-        document.getElementById('category-select').value = '';
-        document.getElementById('amount-input').value = '';
-        document.getElementById('description-input').value = '';
-        document.querySelector('.form-actions button[type="submit"]').innerHTML = '<i class="fas fa-check"></i> Add Transaction';
+        dateInput.value = today;
+        typeSelect.value = '';
+        categorySelect.value = '';
+        amountInput.value = '';
+        descriptionInput.value = '';
+        submitButton.innerHTML = '<i class="fas fa-check"></i> Add Transaction';
     }
-    document.getElementById('type-select').focus();
+    
+    // Focus on first field
+    setTimeout(() => typeSelect.focus(), 100);
 }
 
 // Hide the add transaction form
 function hideAddForm() {
-    document.getElementById('add-form-modal').style.display = 'none';
+    const modal = document.getElementById('add-form-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
     editingTransactionId = null;
 }
 
@@ -334,6 +480,22 @@ function handleFormSubmit(e) {
     const category = document.getElementById('category-select').value;
     let amount = parseFloat(document.getElementById('amount-input').value);
     const description = document.getElementById('description-input').value;
+
+    // Validate required fields
+    if (!date) {
+        alert('Please select a date');
+        return;
+    }
+    
+    if (!type) {
+        alert('Please select a gig type');
+        return;
+    }
+    
+    if (!category) {
+        alert('Please select a category');
+        return;
+    }
 
     if (isNaN(amount) || amount === 0) {
         alert('Please enter a valid amount');
@@ -356,6 +518,8 @@ function handleFormSubmit(e) {
                 amount: amount,
                 description: description || `${category} from ${type}`
             };
+            console.log('Transaction updated:', transactions[index]);
+            alert('Transaction updated successfully!');
         }
     } else {
         // Add mode - create new transaction
@@ -368,6 +532,9 @@ function handleFormSubmit(e) {
             description: description || `${category} from ${type}`
         };
         transactions.push(newTransaction);
+        console.log('New transaction added:', newTransaction);
+        console.log('Total transactions:', transactions.length);
+        alert('Transaction added successfully!');
     }
 
     saveData();
@@ -615,13 +782,10 @@ function loadSavedData() {
         try {
             const parsedData = JSON.parse(savedData);
             transactions = parsedData;
-            return true;
         } catch (error) {
             console.error('Error loading saved data:', error);
-            return false;
         }
     }
-    return false;
 }
 
 // ==========================================

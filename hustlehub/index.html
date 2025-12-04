@@ -21,6 +21,7 @@
                 </button>
                 <nav id="menu-dropdown" class="menu-dropdown">
                     <a href="#" id="create-item-link"><i class="fas fa-plus-square"></i> Create an Item</a>
+                    <a href="#" id="delete-item-link"><i class="fas fa-trash-alt"></i> Delete Item</a>
                     <a href="networth.html"><i class="fas fa-chart-area"></i> Net Worth</a>
                 </nav>
             </div>
@@ -60,7 +61,7 @@
             
             <div class="action-buttons">
                 <button id="add-row-btn" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add New Transaction
+                    <i class="fas fa-plus"></i> New Transaction
                 </button>
                 <button id="filter-toggle-btn" class="btn btn-filter">
                     <i class="fas fa-filter"></i> Filter
@@ -158,6 +159,44 @@
                                 <i class="fas fa-check"></i> Create Item
                             </button>
                             <button type="button" id="cancel-create-item-btn" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Item Modal -->
+        <div id="delete-item-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-trash-alt"></i> Delete an Item</h2>
+                    <button id="close-delete-item-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="delete-item-form">
+                        <div class="form-group">
+                            <label for="delete-item-type-select"><i class="fas fa-list"></i> Item Type:</label>
+                            <select id="delete-item-type-select" required>
+                                <option value="">Select item type...</option>
+                                <option value="gigtype">Gig Type</option>
+                                <option value="category">Category</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="delete-item-select-group" style="display: none;">
+                            <label for="delete-item-name-select"><i class="fas fa-tag"></i> Item to Delete:</label>
+                            <select id="delete-item-name-select" required>
+                                <option value="">Select item...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Delete Item
+                            </button>
+                            <button type="button" id="cancel-delete-item-btn" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Cancel
                             </button>
                         </div>
