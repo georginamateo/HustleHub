@@ -7,15 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setCurrentDate();
 
     // 3. Try to load data from LocalStorage
-    const hasSavedData = loadSavedData();
-    loadCustomItems(); // Load custom gig types and categories
+    loadSavedData();
+    loadCustomItems(); // Load custom gig types and categories (this will call update functions)
 
-    // 4. ONLY if no data was found, load the sample data
-    if (!hasSavedData) {
-        addSampleData();
-    }
-
-    // 5. Render everything
+    // 4. Render everything
     renderTable();
     updateSummary();
 });
@@ -28,7 +23,7 @@ let editingTransactionId = null;
 let customGigTypes = [];
 let customCategories = [];
 
-// Active filters
+// Active filters - initialize with all default filters enabled
 let activeFilters = {
     gigTypes: ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other'],
     categories: ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation'],
@@ -43,33 +38,6 @@ function setCurrentDate() {
     document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', options);
 }
 
-// Add sample data for demo (Only runs if storage is empty)
-function addSampleData() {
-    // Generate sample data for multiple months
-    const sampleTransactions = [
-        // January 2025
-        { id: 1, date: '2025-01-15', type: 'DoorDash', category: 'Income', amount: 45.20, description: 'Lunch deliveries' },
-        { id: 2, date: '2025-01-16', type: 'DoorDash', category: 'Income', amount: 37.20, description: 'Dinner shift' },
-        { id: 3, date: '2025-01-18', type: 'Uber', category: 'Income', amount: 68.50, description: 'Airport trip' },
-        { id: 4, date: '2025-01-19', type: 'Other', category: 'Expense', amount: -56.00, description: 'Gas refill' },
-        { id: 5, date: '2025-01-20', type: 'eBay', category: 'Income', amount: 100.50, description: 'Sold vintage jacket' },
-        { id: 6, date: '2025-01-21', type: 'eBay', category: 'Fees', amount: -12.00, description: 'eBay seller fee' },
-        
-        // February 2025
-        { id: 7, date: '2025-02-10', type: 'DoorDash', category: 'Income', amount: 52.30, description: 'Weekend deliveries' },
-        { id: 8, date: '2025-02-15', type: 'Uber', category: 'Income', amount: 72.80, description: 'Evening rides' },
-        { id: 9, date: '2025-02-20', type: 'Freelance', category: 'Income', amount: 200.00, description: 'Web design project' },
-        { id: 10, date: '2025-02-22', type: 'Other', category: 'Expense', amount: -45.00, description: 'Phone bill' },
-        
-        // December 2024
-        { id: 11, date: '2024-12-05', type: 'eBay', category: 'Income', amount: 85.00, description: 'Sold old books' },
-        { id: 12, date: '2024-12-20', type: 'Uber', category: 'Income', amount: 95.25, description: 'Holiday trips' },
-    ];
-
-    transactions = sampleTransactions;
-    saveData(); // Save these immediately so they persist
-}
-
 // Set up all event listeners
 function setupEventListeners() {
     // Hamburger Menu
@@ -78,21 +46,36 @@ function setupEventListeners() {
         e.preventDefault();
         showCreateItemModal();
     });
+    document.getElementById('delete-item-link')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        showDeleteItemModal();
+    });
 
     // Create Item Modal
     document.getElementById('close-create-item-btn')?.addEventListener('click', hideCreateItemModal);
     document.getElementById('cancel-create-item-btn')?.addEventListener('click', hideCreateItemModal);
     document.getElementById('create-item-form')?.addEventListener('submit', handleCreateItemSubmit);
 
-    // Add Row Button
-    document.getElementById('add-row-btn').addEventListener('click', showAddForm);
+    // Delete Item Modal
+    document.getElementById('close-delete-item-btn')?.addEventListener('click', hideDeleteItemModal);
+    document.getElementById('cancel-delete-item-btn')?.addEventListener('click', hideDeleteItemModal);
+    document.getElementById('delete-item-form')?.addEventListener('submit', handleDeleteItemSubmit);
+    document.getElementById('delete-item-type-select')?.addEventListener('change', updateDeleteItemOptions);
 
-    // Close Modal Buttons
-    document.getElementById('close-modal-btn').addEventListener('click', hideAddForm);
-    document.getElementById('cancel-btn').addEventListener('click', hideAddForm);
-
-    // Form Submission
-    document.getElementById('transaction-form').addEventListener('submit', handleFormSubmit);
+    // Transaction form code removed
+    
+    // New Transaction Form
+    document.getElementById('add-row-btn')?.addEventListener('click', showTransactionModal);
+    document.getElementById('close-transaction-modal')?.addEventListener('click', hideTransactionModal);
+    document.getElementById('cancel-transaction-btn')?.addEventListener('click', hideTransactionModal);
+    document.getElementById('new-transaction-form')?.addEventListener('submit', handleTransactionSubmit);
+    
+    // Close modal when clicking outside
+    document.getElementById('transaction-modal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideTransactionModal();
+        }
+    });
 
     // Clear All Button
     document.getElementById('clear-btn').addEventListener('click', clearAllTransactions);
@@ -102,12 +85,7 @@ function setupEventListeners() {
         checkbox.addEventListener('change', toggleColumnVisibility);
     });
 
-    // Close modal when clicking outside
-    document.getElementById('add-form-modal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            hideAddForm();
-        }
-    });
+    // Modal click outside code removed
 
     // Filter controls
     document.getElementById('filter-toggle-btn')?.addEventListener('click', showFilterModal);
@@ -174,6 +152,8 @@ function handleCreateItemSubmit(e) {
             return;
         }
         customGigTypes.push(itemName);
+        // Add to active filters
+        activeFilters.gigTypes.push(itemName);
         updateGigTypeOptions();
         alert(`Gig Type "${itemName}" has been created!`);
     } else if (itemType === 'category') {
@@ -184,6 +164,8 @@ function handleCreateItemSubmit(e) {
             return;
         }
         customCategories.push(itemName);
+        // Add to active filters
+        activeFilters.categories.push(itemName);
         updateCategoryOptions();
         alert(`Category "${itemName}" has been created!`);
     }
@@ -192,9 +174,121 @@ function handleCreateItemSubmit(e) {
     hideCreateItemModal();
 }
 
+// Delete Item Modal Functions
+function showDeleteItemModal() {
+    document.getElementById('delete-item-modal').style.display = 'flex';
+    document.getElementById('delete-item-type-select').value = '';
+    document.getElementById('delete-item-select-group').style.display = 'none';
+    // Close hamburger menu
+    document.getElementById('hamburger-btn').classList.remove('active');
+    document.getElementById('menu-dropdown').classList.remove('active');
+}
+
+function hideDeleteItemModal() {
+    document.getElementById('delete-item-modal').style.display = 'none';
+}
+
+function updateDeleteItemOptions() {
+    const itemType = document.getElementById('delete-item-type-select').value;
+    const selectGroup = document.getElementById('delete-item-select-group');
+    const itemSelect = document.getElementById('delete-item-name-select');
+    
+    if (!itemType) {
+        selectGroup.style.display = 'none';
+        return;
+    }
+    
+    selectGroup.style.display = 'block';
+    itemSelect.innerHTML = '<option value="">Select item...</option>';
+    
+    if (itemType === 'gigtype') {
+        if (customGigTypes.length === 0) {
+            itemSelect.innerHTML = '<option value="">No custom gig types to delete</option>';
+            return;
+        }
+        customGigTypes.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            itemSelect.appendChild(option);
+        });
+    } else if (itemType === 'category') {
+        if (customCategories.length === 0) {
+            itemSelect.innerHTML = '<option value="">No custom categories to delete</option>';
+            return;
+        }
+        customCategories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            itemSelect.appendChild(option);
+        });
+    }
+}
+
+function handleDeleteItemSubmit(e) {
+    e.preventDefault();
+    
+    const itemType = document.getElementById('delete-item-type-select').value;
+    const itemName = document.getElementById('delete-item-name-select').value;
+    
+    if (!itemName || itemName === 'No custom gig types to delete' || itemName === 'No custom categories to delete') {
+        return;
+    }
+    
+    const confirmDelete = confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`);
+    if (!confirmDelete) {
+        return;
+    }
+    
+    if (itemType === 'gigtype') {
+        // Check if any transactions use this gig type
+        const transactionsWithType = transactions.filter(t => t.type === itemName);
+        if (transactionsWithType.length > 0) {
+            const confirmWithTransactions = confirm(
+                `Warning: ${transactionsWithType.length} transaction(s) use this gig type. ` +
+                `Deleting it will not remove these transactions, but you won't be able to create new ones with this type. ` +
+                `Continue with deletion?`
+            );
+            if (!confirmWithTransactions) {
+                return;
+            }
+        }
+        
+        customGigTypes = customGigTypes.filter(type => type !== itemName);
+        updateGigTypeOptions();
+        alert(`Gig Type "${itemName}" has been deleted!`);
+    } else if (itemType === 'category') {
+        // Check if any transactions use this category
+        const transactionsWithCategory = transactions.filter(t => t.category === itemName);
+        if (transactionsWithCategory.length > 0) {
+            const confirmWithTransactions = confirm(
+                `Warning: ${transactionsWithCategory.length} transaction(s) use this category. ` +
+                `Deleting it will not remove these transactions, but you won't be able to create new ones with this category. ` +
+                `Continue with deletion?`
+            );
+            if (!confirmWithTransactions) {
+                return;
+            }
+        }
+        
+        customCategories = customCategories.filter(category => category !== itemName);
+        updateCategoryOptions();
+        alert(`Category "${itemName}" has been deleted!`);
+    }
+    
+    saveCustomItems();
+    hideDeleteItemModal();
+}
+
 function updateGigTypeOptions() {
-    const typeSelect = document.getElementById('type-select');
-    const filterCheckboxes = document.querySelector('.gig-type-filter')?.parentElement.parentElement;
+    const typeSelect = document.getElementById('transaction-gig-type');
+    if (!typeSelect) {
+        console.error('transaction-gig-type element not found');
+        return;
+    }
+    
+    const filterCheckboxContainer = document.querySelector('.gig-type-filter')?.parentElement.parentElement;
     
     // Update transaction form dropdown
     const currentValue = typeSelect.value;
@@ -209,9 +303,9 @@ function updateGigTypeOptions() {
     });
     typeSelect.value = currentValue;
     
-    // Update filter checkboxes
-    if (filterCheckboxes) {
-        filterCheckboxes.innerHTML = '';
+    // Update filter checkboxes - clear and rebuild all
+    if (filterCheckboxContainer) {
+        filterCheckboxContainer.innerHTML = '';
         allGigTypes.forEach(type => {
             const label = document.createElement('label');
             const checkbox = document.createElement('input');
@@ -221,14 +315,19 @@ function updateGigTypeOptions() {
             checkbox.checked = activeFilters.gigTypes.includes(type);
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(' ' + type));
-            filterCheckboxes.appendChild(label);
+            filterCheckboxContainer.appendChild(label);
         });
     }
 }
 
 function updateCategoryOptions() {
-    const categorySelect = document.getElementById('category-select');
-    const filterCheckboxes = document.querySelector('.category-filter')?.parentElement.parentElement;
+    const categorySelect = document.getElementById('transaction-category');
+    if (!categorySelect) {
+        console.error('transaction-category element not found');
+        return;
+    }
+    
+    const filterCheckboxContainer = document.querySelector('.category-filter')?.parentElement.parentElement;
     
     // Update transaction form dropdown
     const currentValue = categorySelect.value;
@@ -243,9 +342,9 @@ function updateCategoryOptions() {
     });
     categorySelect.value = currentValue;
     
-    // Update filter checkboxes
-    if (filterCheckboxes) {
-        filterCheckboxes.innerHTML = '';
+    // Update filter checkboxes - clear and rebuild all
+    if (filterCheckboxContainer) {
+        filterCheckboxContainer.innerHTML = '';
         allCategories.forEach(category => {
             const label = document.createElement('label');
             const checkbox = document.createElement('input');
@@ -255,7 +354,7 @@ function updateCategoryOptions() {
             checkbox.checked = activeFilters.categories.includes(category);
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(' ' + category));
-            filterCheckboxes.appendChild(label);
+            filterCheckboxContainer.appendChild(label);
         });
     }
 }
@@ -272,7 +371,6 @@ function loadCustomItems() {
     if (savedGigTypes) {
         try {
             customGigTypes = JSON.parse(savedGigTypes);
-            updateGigTypeOptions();
         } catch (error) {
             console.error('Error loading custom gig types:', error);
         }
@@ -281,69 +379,130 @@ function loadCustomItems() {
     if (savedCategories) {
         try {
             customCategories = JSON.parse(savedCategories);
-            updateCategoryOptions();
         } catch (error) {
             console.error('Error loading custom categories:', error);
         }
     }
+    
+    // Add custom items to activeFilters if not already there
+    customGigTypes.forEach(type => {
+        if (!activeFilters.gigTypes.includes(type)) {
+            activeFilters.gigTypes.push(type);
+        }
+    });
+    
+    customCategories.forEach(category => {
+        if (!activeFilters.categories.includes(category)) {
+            activeFilters.categories.push(category);
+        }
+    });
+    
+    // Update options after loading
+    updateGigTypeOptions();
+    updateCategoryOptions();
 }
 
 // Show the add transaction form
-function showAddForm(transactionId = null) {
-    editingTransactionId = transactionId;
-    document.getElementById('add-form-modal').style.display = 'flex';
-    
-    if (transactionId) {
-        // Edit mode - populate form with existing data
-        const transaction = transactions.find(t => t.id === transactionId);
-        if (transaction) {
-            document.querySelector('.modal-header h2').innerHTML = '<i class="fas fa-edit"></i> Edit Transaction';
-            document.getElementById('date-input').value = transaction.date;
-            document.getElementById('type-select').value = transaction.type;
-            document.getElementById('category-select').value = transaction.category;
-            document.getElementById('amount-input').value = Math.abs(transaction.amount).toFixed(2);
-            document.getElementById('description-input').value = transaction.description;
-            document.querySelector('.form-actions button[type="submit"]').innerHTML = '<i class="fas fa-check"></i> Update Transaction';
-        }
-    } else {
-        // Add mode - reset form
-        document.querySelector('.modal-header h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Transaction';
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('date-input').value = today;
-        document.getElementById('type-select').value = '';
-        document.getElementById('category-select').value = '';
-        document.getElementById('amount-input').value = '';
-        document.getElementById('description-input').value = '';
-        document.querySelector('.form-actions button[type="submit"]').innerHTML = '<i class="fas fa-check"></i> Add Transaction';
-    }
-    document.getElementById('type-select').focus();
-}
+// Transaction form functions removed
 
-// Hide the add transaction form
-function hideAddForm() {
-    document.getElementById('add-form-modal').style.display = 'none';
+// Show transaction modal
+function showTransactionModal() {
     editingTransactionId = null;
+    const modal = document.getElementById('transaction-modal');
+    const form = document.getElementById('new-transaction-form');
+    const modalHeader = document.querySelector('#transaction-modal .modal-header h2');
+    const submitButton = document.querySelector('#new-transaction-form button[type="submit"]');
+    
+    if (modal && form) {
+        // Reset form
+        form.reset();
+        
+        // Set today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('transaction-date').value = today;
+        
+        // Update header and button for add mode
+        if (modalHeader) {
+            modalHeader.innerHTML = '<i class="fas fa-plus-circle"></i> New Transaction';
+        }
+        if (submitButton) {
+            submitButton.innerHTML = '<i class="fas fa-check"></i> Add Transaction';
+        }
+        
+        // Show modal
+        modal.style.display = 'flex';
+        
+        // Focus on gig type field
+        setTimeout(() => document.getElementById('transaction-gig-type').focus(), 100);
+    }
 }
 
-// Handle form submission
-function handleFormSubmit(e) {
+// Edit transaction
+function editTransaction(id) {
+    const transaction = transactions.find(t => t.id === id);
+    if (!transaction) return;
+    
+    editingTransactionId = id;
+    const modal = document.getElementById('transaction-modal');
+    const modalHeader = document.querySelector('#transaction-modal .modal-header h2');
+    const submitButton = document.querySelector('#new-transaction-form button[type="submit"]');
+    
+    if (modal) {
+        // Populate form with transaction data
+        document.getElementById('transaction-date').value = transaction.date;
+        document.getElementById('transaction-gig-type').value = transaction.type;
+        document.getElementById('transaction-category').value = transaction.category;
+        document.getElementById('transaction-amount').value = Math.abs(transaction.amount).toFixed(2);
+        document.getElementById('transaction-description').value = transaction.description;
+        
+        // Update header and button for edit mode
+        if (modalHeader) {
+            modalHeader.innerHTML = '<i class="fas fa-edit"></i> Edit Transaction';
+        }
+        if (submitButton) {
+            submitButton.innerHTML = '<i class="fas fa-check"></i> Update Transaction';
+        }
+        
+        // Show modal
+        modal.style.display = 'flex';
+        
+        // Focus on gig type field
+        setTimeout(() => document.getElementById('transaction-gig-type').focus(), 100);
+    }
+}
+
+// Hide transaction modal
+function hideTransactionModal() {
+    const modal = document.getElementById('transaction-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Handle transaction form submission
+function handleTransactionSubmit(e) {
     e.preventDefault();
-
-    const date = document.getElementById('date-input').value;
-    const type = document.getElementById('type-select').value;
-    const category = document.getElementById('category-select').value;
-    let amount = parseFloat(document.getElementById('amount-input').value);
-    const description = document.getElementById('description-input').value;
-
-    if (isNaN(amount) || amount === 0) {
-        alert('Please enter a valid amount');
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    const date = formData.get('date');
+    const gigType = formData.get('gigType');
+    const category = formData.get('category');
+    let amount = parseFloat(formData.get('amount'));
+    const description = formData.get('description');
+    
+    // Validate amount
+    if (isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid amount greater than 0');
         return;
     }
-
+    
+    // Make expenses negative
     if (category === 'Expense' || category === 'Fees' || category === 'Supplies' || category === 'Transportation') {
         amount = -Math.abs(amount);
     }
-
+    
     if (editingTransactionId) {
         // Edit mode - update existing transaction
         const index = transactions.findIndex(t => t.id === editingTransactionId);
@@ -351,29 +510,43 @@ function handleFormSubmit(e) {
             transactions[index] = {
                 ...transactions[index],
                 date: date,
-                type: type,
+                type: gigType,
                 category: category,
                 amount: amount,
-                description: description || `${category} from ${type}`
+                description: description || `${category} from ${gigType}`
             };
         }
+        
+        // Save and update display
+        saveData();
+        renderTable();
+        updateSummary();
+        
+        // Close modal and show success message
+        hideTransactionModal();
+        alert('Transaction updated successfully!');
     } else {
         // Add mode - create new transaction
         const newTransaction = {
             id: Date.now(),
             date: date,
-            type: type,
+            type: gigType,
             category: category,
             amount: amount,
-            description: description || `${category} from ${type}`
+            description: description || `${category} from ${gigType}`
         };
+        
         transactions.push(newTransaction);
+        
+        // Save and update display
+        saveData();
+        renderTable();
+        updateSummary();
+        
+        // Close modal and show success message
+        hideTransactionModal();
+        alert('Transaction added successfully!');
     }
-
-    saveData();
-    renderTable();
-    updateSummary();
-    hideAddForm();
 }
 
 // Render the table with all transactions
@@ -452,6 +625,18 @@ function renderTable() {
         `;
 
         tableBody.appendChild(row);
+
+        // Add description row if description exists
+        if (transaction.description && transaction.description.trim() !== '') {
+            const descRow = document.createElement('tr');
+            descRow.className = transaction.amount > 0 ? 'income-row description-row' : 'expense-row description-row';
+            descRow.innerHTML = `
+                <td colspan="5" class="description-cell">
+                    <span class="description-text">${transaction.description}</span>
+                </td>
+            `;
+            tableBody.appendChild(descRow);
+        }
     });
 
     addRowActionListeners();
@@ -468,7 +653,7 @@ function addRowActionListeners() {
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = parseInt(this.getAttribute('data-id'));
-            showAddForm(id);
+            editTransaction(id);
         });
     });
 }
@@ -559,13 +744,19 @@ function applyFilters() {
 }
 
 function resetFilters() {
-    // Reset to default (all checked)
-    activeFilters.gigTypes = ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other'];
-    activeFilters.categories = ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation'];
+    // Collect all available gig types (default + custom)
+    const allGigTypes = ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other', ...customGigTypes];
+    
+    // Collect all available categories (default + custom)
+    const allCategories = ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation', ...customCategories];
+    
+    // Reset to all checked
+    activeFilters.gigTypes = allGigTypes;
+    activeFilters.categories = allCategories;
     activeFilters.minAmount = null;
     activeFilters.maxAmount = null;
     
-    // Update UI
+    // Update UI - check all checkboxes
     document.querySelectorAll('.gig-type-filter').forEach(checkbox => {
         checkbox.checked = true;
     });
@@ -615,13 +806,35 @@ function loadSavedData() {
         try {
             const parsedData = JSON.parse(savedData);
             transactions = parsedData;
-            return true;
         } catch (error) {
             console.error('Error loading saved data:', error);
-            return false;
         }
+    } else {
+        // Add sample data if no saved data exists
+        addSampleData();
     }
-    return false;
+}
+
+// Add sample transaction data
+function addSampleData() {
+    transactions = [
+        { id: 1, date: '2024-11-05', type: 'DoorDash', category: 'Income', amount: 45.50, description: 'Dinner delivery shift' },
+        { id: 2, date: '2024-11-08', type: 'Uber', category: 'Income', amount: 78.25, description: 'Weekend rides' },
+        { id: 3, date: '2024-11-10', type: 'DoorDash', category: 'Expense', amount: -12.00, description: 'Gas for deliveries' },
+        { id: 4, date: '2024-11-12', type: 'eBay', category: 'Income', amount: 125.00, description: 'Sold vintage camera' },
+        { id: 5, date: '2024-11-15', type: 'Freelance', category: 'Income', amount: 250.00, description: 'Website design project' },
+        { id: 6, date: '2024-11-18', type: 'DoorDash', category: 'Fees', amount: -5.50, description: 'Platform service fee' },
+        { id: 7, date: '2024-11-20', type: 'Uber', category: 'Income', amount: 92.75, description: 'Airport trips' },
+        { id: 8, date: '2024-11-22', type: 'eBay', category: 'Supplies', amount: -25.00, description: 'Shipping materials' },
+        { id: 9, date: '2024-11-25', type: 'DoorDash', category: 'Income', amount: 67.00, description: 'Holiday dinner rush' },
+        { id: 10, date: '2024-11-28', type: 'Freelance', category: 'Income', amount: 180.00, description: 'Logo design' },
+        { id: 11, date: '2024-12-01', type: 'Uber', category: 'Transportation', amount: -30.00, description: 'Car maintenance' },
+        { id: 12, date: '2024-12-02', type: 'DoorDash', category: 'Income', amount: 55.25, description: 'Lunch delivery shift' },
+        { id: 13, date: '2024-12-03', type: 'eBay', category: 'Income', amount: 95.00, description: 'Sold collectible toy' },
+        { id: 14, date: '2024-12-04', type: 'Other', category: 'Income', amount: 50.00, description: 'Pet sitting' },
+        { id: 15, date: '2024-12-04', type: 'DoorDash', category: 'Expense', amount: -18.50, description: 'Gas refill' }
+    ];
+    saveData();
 }
 
 // ==========================================

@@ -210,6 +210,13 @@ body {
     min-width: 300px;
 }
 
+.date-range {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin: 5px 0 10px 0;
+    font-weight: 500;
+}
+
 .breakdown {
     margin-top: 15px;
     padding-top: 15px;
@@ -527,6 +534,21 @@ body {
 
 .expense-row {
     background-color: rgba(239, 68, 68, 0.05);
+}
+
+.description-row {
+    border-top: none !important;
+}
+
+.description-cell {
+    padding: 0 15px 10px 15px !important;
+    border-top: none !important;
+}
+
+.description-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-style: italic;
 }
 
 .actions-col {
