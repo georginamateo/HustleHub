@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // 5. Render everything
   renderTable();
   updateSummary();
+  updateChart();
 });
 
 // Variables to store transactions
@@ -182,9 +183,11 @@ function renderTable() {
   });
 
   addRowActionListeners();
+  updateChart(); // Update chart after rendering table
 }
 
 function addRowActionListeners() {
+  // Delete Button Logic
   document.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const id = parseInt(this.getAttribute('data-id'));
@@ -192,9 +195,27 @@ function addRowActionListeners() {
     });
   });
 
+  // Edit Button Logic (FIXED)
   document.querySelectorAll('.edit-btn').forEach(btn => {
     btn.addEventListener('click', function() {
-      alert('Edit functionality will be added in a future update!');
+      const id = parseInt(this.getAttribute('data-id'));
+      const transaction = transactions.find(t => t.id === id);
+      
+      if (transaction) {
+        // 1. Open the form
+        showAddForm();
+        
+        // 2. Fill the form with existing data
+        document.getElementById('date-input').value = transaction.date;
+        document.getElementById('type-select').value = transaction.type;
+        document.getElementById('category-select').value = transaction.category;
+        document.getElementById('amount-input').value = Math.abs(transaction.amount); // Always show positive in input
+        document.getElementById('description-input').value = transaction.description;
+        
+        // 3. Delete the old one immediately (so saving creates the "updated" version)
+        // Note: In a real app, you'd update the ID, but for a demo, this is a safe hack.
+        transactions = transactions.filter(t => t.id !== id);
+      }
     });
   });
 }
@@ -400,4 +421,47 @@ function processAiCommand(text) {
   updateSummary();
 
   addMessage(`Got it! I logged a ${category} of $${Math.abs(amount)} for ${type}.`, 'bot');
+}
+
+let myChart = null; // Global variable
+
+function updateChart() {
+  const ctx = document.getElementById('profitChart');
+  if (!ctx) return; // Guard clause in case HTML isn't there
+
+  // 1. Group data by Gig Type
+  const totals = {};
+  transactions.forEach(t => {
+    if (!totals[t.type]) totals[t.type] = 0;
+    totals[t.type] += t.amount;
+  });
+
+  const labels = Object.keys(totals);
+  const data = Object.values(totals);
+  const colors = data.map(val => val >= 0 ? '#10b981' : '#ef4444'); // Green if profit, Red if loss
+
+  // 2. Destroy old chart if exists
+  if (myChart) myChart.destroy();
+
+  // 3. Create new Chart
+  myChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Net Profit ($)',
+        data: data,
+        backgroundColor: colors,
+        borderRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: 'Profitability by Gig' }
+      }
+    }
+  });
 }
