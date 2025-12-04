@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Variables to store transactions
 let transactions = [];
+let editingTransactionId = null; // Track if we're editing an existing transaction
 
 // Initialize the app
 function initializeApp() {
@@ -78,18 +79,49 @@ function setupEventListeners() {
 }
 
 // Show the add transaction form
-function showAddForm() {
-    document.getElementById('add-form-modal').style.display = 'flex';
+function showAddForm(transactionId = null) {
+    const modal = document.getElementById('add-form-modal');
+    const modalHeader = modal.querySelector('.modal-header h2');
+    const submitBtn = modal.querySelector('button[type="submit"]');
     
-    // Set today's date as default
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date-input').value = today;
+    modal.style.display = 'flex';
     
-    // Clear form fields except date
-    document.getElementById('type-select').value = '';
-    document.getElementById('category-select').value = '';
-    document.getElementById('amount-input').value = '';
-    document.getElementById('description-input').value = '';
+    if (transactionId) {
+        // Edit mode
+        editingTransactionId = transactionId;
+        const transaction = transactions.find(t => t.id === transactionId);
+        
+        if (transaction) {
+            // Update modal title and button
+            modalHeader.innerHTML = '<i class="fas fa-edit"></i> Edit Transaction';
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> Update Transaction';
+            
+            // Populate form with existing data
+            document.getElementById('date-input').value = transaction.date;
+            document.getElementById('type-select').value = transaction.type;
+            document.getElementById('category-select').value = transaction.category;
+            // Show absolute value for amount (remove negative sign)
+            document.getElementById('amount-input').value = Math.abs(transaction.amount).toFixed(2);
+            document.getElementById('description-input').value = transaction.description;
+        }
+    } else {
+        // Add mode
+        editingTransactionId = null;
+        
+        // Update modal title and button
+        modalHeader.innerHTML = '<i class="fas fa-plus-circle"></i> Add New Transaction';
+        submitBtn.innerHTML = '<i class="fas fa-check"></i> Add Transaction';
+        
+        // Set today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date-input').value = today;
+        
+        // Clear form fields except date
+        document.getElementById('type-select').value = '';
+        document.getElementById('category-select').value = '';
+        document.getElementById('amount-input').value = '';
+        document.getElementById('description-input').value = '';
+    }
     
     // Focus on first field
     document.getElementById('type-select').focus();
@@ -98,6 +130,7 @@ function showAddForm() {
 // Hide the add transaction form
 function hideAddForm() {
     document.getElementById('add-form-modal').style.display = 'none';
+    editingTransactionId = null; // Reset editing state
 }
 
 // Handle form submission
@@ -122,18 +155,40 @@ function handleFormSubmit(e) {
         amount = -Math.abs(amount);
     }
     
-    // Create new transaction object
-    const newTransaction = {
-        id: Date.now(), // Simple ID using timestamp
-        date: date,
-        type: type,
-        category: category,
-        amount: amount,
-        description: description || `${category} from ${type}`
-    };
-    
-    // Add to transactions array
-    transactions.push(newTransaction);
+    if (editingTransactionId) {
+        // Edit mode - update existing transaction
+        const transactionIndex = transactions.findIndex(t => t.id === editingTransactionId);
+        
+        if (transactionIndex !== -1) {
+            transactions[transactionIndex] = {
+                ...transactions[transactionIndex],
+                date: date,
+                type: type,
+                category: category,
+                amount: amount,
+                description: description || `${category} from ${type}`
+            };
+            
+            // Show success message
+            alert('Transaction updated successfully!');
+        }
+    } else {
+        // Add mode - create new transaction
+        const newTransaction = {
+            id: Date.now(), // Simple ID using timestamp
+            date: date,
+            type: type,
+            category: category,
+            amount: amount,
+            description: description || `${category} from ${type}`
+        };
+        
+        // Add to transactions array
+        transactions.push(newTransaction);
+        
+        // Show success message
+        alert('Transaction added successfully!');
+    }
     
     // Save to localStorage
     saveData();
@@ -146,9 +201,6 @@ function handleFormSubmit(e) {
     
     // Hide the form
     hideAddForm();
-    
-    // Show success message
-    alert('Transaction added successfully!');
 }
 
 // Render the table with all transactions
@@ -230,11 +282,20 @@ function addRowActionListeners() {
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = parseInt(this.getAttribute('data-id'));
-            // For now, just show an alert
-            alert('Edit functionality will be added in a future update!');
-            // You could implement a full edit feature here
+            editTransaction(id);
         });
     });
+}
+
+// Edit a transaction
+function editTransaction(id) {
+    const transaction = transactions.find(t => t.id === id);
+    
+    if (transaction) {
+        showAddForm(id);
+    } else {
+        alert('Transaction not found!');
+    }
 }
 
 // Delete a transaction
