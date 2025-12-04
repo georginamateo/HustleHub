@@ -19,6 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // Variables to store transactions
 let transactions = [];
 let editingTransactionId = null; // Track if we're editing an existing transaction
+let activeFilters = {
+    gigTypes: ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other'],
+    categories: ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation'],
+    minAmount: null,
+    maxAmount: null
+};
 
 // Initialize the app
 function initializeApp() {
@@ -52,15 +58,36 @@ function addSampleData() {
 
 // Set up all event listeners
 function setupEventListeners() {
+    // Filter Button
+    const filterBtn = document.getElementById('filter-btn');
+    if (filterBtn) {
+        filterBtn.addEventListener('click', showFilterMenu);
+    } else {
+        console.error('Filter button not found!');
+    }
+    
     // Add Row Button
-    document.getElementById('add-row-btn').addEventListener('click', showAddForm);
+    const addBtn = document.getElementById('add-row-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            console.log('Add button clicked!');
+            showAddForm();
+        });
+    } else {
+        console.error('Add button not found!');
+    }
     
     // Close Modal Buttons
     document.getElementById('close-modal-btn').addEventListener('click', hideAddForm);
     document.getElementById('cancel-btn').addEventListener('click', hideAddForm);
+    document.getElementById('close-filter-btn').addEventListener('click', hideFilterMenu);
     
     // Form Submission
     document.getElementById('transaction-form').addEventListener('submit', handleFormSubmit);
+    
+    // Filter Actions
+    document.getElementById('apply-filters-btn').addEventListener('click', applyFilters);
+    document.getElementById('reset-filters-btn').addEventListener('click', resetFilters);
     
     // Clear All Button
     document.getElementById('clear-btn').addEventListener('click', clearAllTransactions);
@@ -76,11 +103,79 @@ function setupEventListeners() {
             hideAddForm();
         }
     });
+    
+    document.getElementById('filter-menu-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideFilterMenu();
+        }
+    });
+}
+
+// Show the filter menu
+function showFilterMenu() {
+    document.getElementById('filter-menu-modal').style.display = 'flex';
+}
+
+// Hide the filter menu
+function hideFilterMenu() {
+    document.getElementById('filter-menu-modal').style.display = 'none';
+}
+
+// Apply filters to the table
+function applyFilters() {
+    // Get selected gig types
+    const gigTypeCheckboxes = document.querySelectorAll('.gig-type-filter:checked');
+    activeFilters.gigTypes = Array.from(gigTypeCheckboxes).map(cb => cb.value);
+    
+    // Get selected categories
+    const categoryCheckboxes = document.querySelectorAll('.category-filter:checked');
+    activeFilters.categories = Array.from(categoryCheckboxes).map(cb => cb.value);
+    
+    // Get amount range
+    const minAmount = document.getElementById('min-amount').value;
+    const maxAmount = document.getElementById('max-amount').value;
+    activeFilters.minAmount = minAmount ? parseFloat(minAmount) : null;
+    activeFilters.maxAmount = maxAmount ? parseFloat(maxAmount) : null;
+    
+    // Hide the filter menu
+    hideFilterMenu();
+    
+    // Re-render the table with filters applied
+    renderTable();
+}
+
+// Reset all filters
+function resetFilters() {
+    // Reset gig type checkboxes
+    document.querySelectorAll('.gig-type-filter').forEach(cb => cb.checked = true);
+    
+    // Reset category checkboxes
+    document.querySelectorAll('.category-filter').forEach(cb => cb.checked = true);
+    
+    // Reset amount inputs
+    document.getElementById('min-amount').value = '';
+    document.getElementById('max-amount').value = '';
+    
+    // Reset active filters
+    activeFilters = {
+        gigTypes: ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other'],
+        categories: ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation'],
+        minAmount: null,
+        maxAmount: null
+    };
+    
+    // Re-render the table
+    renderTable();
 }
 
 // Show the add transaction form
 function showAddForm(transactionId = null) {
     const modal = document.getElementById('add-form-modal');
+    if (!modal) {
+        console.error('Modal not found!');
+        return;
+    }
+    
     const modalHeader = modal.querySelector('.modal-header h2');
     const submitBtn = modal.querySelector('button[type="submit"]');
     
@@ -219,8 +314,41 @@ function renderTable() {
         return;
     }
     
+    // Apply filters
+    let filteredTransactions = transactions.filter(transaction => {
+        // Filter by gig type
+        if (!activeFilters.gigTypes.includes(transaction.type)) {
+            return false;
+        }
+        
+        // Filter by category
+        if (!activeFilters.categories.includes(transaction.category)) {
+            return false;
+        }
+        
+        // Filter by amount range
+        const absAmount = Math.abs(transaction.amount);
+        if (activeFilters.minAmount !== null && absAmount < activeFilters.minAmount) {
+            return false;
+        }
+        if (activeFilters.maxAmount !== null && absAmount > activeFilters.maxAmount) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    if (filteredTransactions.length === 0) {
+        // Show empty message
+        const emptyRow = document.createElement('tr');
+        emptyRow.className = 'empty-row';
+        emptyRow.innerHTML = '<td colspan="5">No transactions match the current filters. Try adjusting your filters.</td>';
+        tableBody.appendChild(emptyRow);
+        return;
+    }
+    
     // Sort transactions by date (newest first)
-    const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sortedTransactions = [...filteredTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
     
     // Add each transaction as a row
     sortedTransactions.forEach(transaction => {

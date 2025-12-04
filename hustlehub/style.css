@@ -145,6 +145,97 @@ body {
     background-color: #e2e8f0;
 }
 
+/* Dropdown Styles */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Table Header with Filter */
+.header-with-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    position: relative;
+    z-index: 100;
+}
+
+.table-dropdown-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: auto;
+    position: relative;
+    z-index: 101;
+}
+
+.table-dropdown-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.table-dropdown-btn.active {
+    background-color: rgba(255, 255, 255, 0.4);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    z-index: 1001;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 220px;
+    background-color: white;
+    border: 2px solid #4361ee;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1002;
+    margin-top: 2px;
+}
+
+.dropdown-menu.show {
+    max-height: 300px;
+    opacity: 1;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: #333;
+}
+
+.dropdown-item:hover {
+    background-color: #f0f4ff;
+}
+
+.dropdown-item.active {
+    background-color: #4361ee;
+    color: white;
+    font-weight: 600;
+}
+
+.dropdown-item i {
+    width: 20px;
+}
+
 .action-buttons {
     display: flex;
     gap: 10px;
@@ -181,6 +272,15 @@ body {
     background-color: #5a6268;
 }
 
+.btn-filter {
+    background-color: #10b981;
+    color: white;
+}
+
+.btn-filter:hover {
+    background-color: #059669;
+}
+
 /* Table Styles */
 .spreadsheet-container {
     padding: 20px 30px;
@@ -190,7 +290,7 @@ body {
 .table-wrapper {
     border: 1px solid #dee2e6;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #gig-table {
@@ -202,6 +302,8 @@ body {
 #gig-table thead {
     background-color: #4361ee;
     color: white;
+    position: relative;
+    z-index: 10;
 }
 
 #gig-table th {
@@ -394,6 +496,124 @@ body {
     justify-content: center;
 }
 
+/* Filter Menu Styles */
+.filter-menu-content {
+    max-width: 600px;
+    animation: slideInFromTop 0.4s ease-out;
+}
+
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.filter-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.filter-section:last-of-type {
+    border-bottom: none;
+}
+
+.filter-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.filter-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 10px 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.filter-checkbox:hover {
+    background-color: #e2e8f0;
+}
+
+.filter-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #4361ee;
+}
+
+.filter-checkbox input[type="checkbox"]:checked + span {
+    font-weight: 600;
+    color: #4361ee;
+}
+
+.filter-checkbox:has(input:checked) {
+    background-color: rgba(67, 97, 238, 0.1);
+    border-color: #4361ee;
+}
+
+.amount-range-inputs {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.range-input-group {
+    flex: 1;
+}
+
+.range-input-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #495057;
+}
+
+.range-input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.range-input-group input:focus {
+    outline: none;
+    border-color: #4361ee;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.filter-actions .btn {
+    flex: 1;
+    justify-content: center;
+}
+
 /* Footer */
 .footer {
     padding: 20px 30px;
@@ -401,6 +621,8 @@ body {
     background-color: #f8f9fa;
     border-top: 1px solid #eaeaea;
     color: #6c757d;
+    position: relative;
+    z-index: 1;
 }
 
 .instructions {
