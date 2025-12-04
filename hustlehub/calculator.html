@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HustleHub | Resell Calculator</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+<div class="container">
+
+    <!-- Header (Implementation 1) -->
+    <header class="header">
+        <div class="hamburger-menu">
+            <button id="hamburger-btn" class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <nav id="menu-dropdown" class="menu-dropdown">
+                <a href="index.html"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="#" id="create-item-link"><i class="fas fa-plus-square"></i> Create an Item</a>
+                <a href="networth.html"><i class="fas fa-chart-area"></i> Net Worth</a>
+                <a href="calculator.html"><i class="fas fa-calculator"></i> Resell Calculator</a>
+            </nav>
+        </div>
+
+        <div class="logo">
+            <i class="fas fa-chart-line"></i>
+            <h1>HustleHub</h1>
+            <span class="tagline">Side Gig Dashboard</span>
+        </div>
+
+        <div class="date-display">
+            <p id="current-date">Loading...</p>
+        </div>
+    </header>
+
+    <!-- Inputs (Implementation 1 but w/out Platform dropdown) -->
+    <main class="calculator-container">
+        <h2 class="section-title">
+            <i class="fas fa-calculator"></i> Resell Fee Calculator
+        </h2>
+
+        <div class="calculator-card">
+
+            <div class="form-group">
+                <label><i class="fas fa-tags"></i> Sold Price:</label>
+                <div class="amount-input-wrapper">
+                    <span class="currency">$</span>
+                    <input type="number" id="sold-price" step="0.01" placeholder="0.00">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-box"></i> Your Cost:</label>
+                <div class="amount-input-wrapper">
+                    <span class="currency">$</span>
+                    <input type="number" id="item-cost" step="0.01" placeholder="0.00">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-shipping-fast"></i> Shipping Paid by Buyer?</label>
+                <select id="buyer-shipping">
+                    <option value="yes">Yes (Buyer covers shipping)</option>
+                    <option value="no">No (You pay shipping)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="shipping-cost-group">
+                <label><i class="fas fa-truck"></i> Your Shipping Cost:</label>
+                <div class="amount-input-wrapper">
+                    <span class="currency">$</span>
+                    <input type="number" id="shipping-cost" step="0.01" placeholder="0.00">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button id="calculate-btn" class="btn btn-primary">
+                    <i class="fas fa-equals"></i> Calculate
+                </button>
+                <button id="reset-btn" class="btn btn-secondary">
+                    <i class="fas fa-undo"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Results (Implementation 2 showcase boxes) -->
+        <section class="dashboard-summary" id="results-section" style="display:none; margin-top: 25px;">
+            <div class="summary-card">
+                <h3><i class="fas fa-tag"></i> eBay Profit</h3>
+                <p class="amount" id="ebay-profit">$0.00</p>
+                <small id="ebay-fees"></small>
+            </div>
+
+            <div class="summary-card">
+                <h3><i class="fas fa-store"></i> Facebook Profit</h3>
+                <p class="amount" id="fb-profit">$0.00</p>
+                <small id="fb-fees"></small>
+            </div>
+
+            <div class="summary-card">
+                <h3><i class="fas fa-box-open"></i> Mercari Profit</h3>
+                <p class="amount" id="mer-profit">$0.00</p>
+                <small id="mer-fees"></small>
+            </div>
+
+            <div class="summary-card">
+                <h3><i class="fas fa-gift"></i> Etsy Profit</h3>
+                <p class="amount" id="etsy-profit">$0.00</p>
+                <small id="etsy-fees"></small>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>CS 4875: Human Centered Computing | Fall 2025 | Group 09 - HustleHub</p>
+    </footer>
+
+</div>
+
+<script>
+    // Load date
+    document.getElementById("current-date").textContent = new Date().toLocaleDateString();
+
+    // Hide shipping field if buyer pays
+    const buyerShipping = document.getElementById("buyer-shipping");
+    const shippingGroup = document.getElementById("shipping-cost-group");
+
+    buyerShipping.addEventListener("change", () => {
+        shippingGroup.style.display = buyerShipping.value === "no" ? "block" : "none";
+    });
+
+    // Fee formulas
+    function calcEBay(price) { return price * 0.1325 + 0.30; }
+    function calcFB(price) { return price * 0.05; }
+    function calcMercari(price) { return price * 0.129 + 0.30; }
+    function calcEtsy(price) { return price * 0.095 + 0.25; }
+
+    // Calculate button
+    document.getElementById("calculate-btn").addEventListener("click", () => {
+        const sold = parseFloat(document.getElementById("sold-price").value) || 0;
+        const cost = parseFloat(document.getElementById("item-cost").value) || 0;
+        const shipping = buyerShipping.value === "no" ? parseFloat(document.getElementById("shipping-cost").value) || 0 : 0;
+
+        const results = {
+            ebay: { fee: calcEBay(sold) },
+            fb: { fee: calcFB(sold) },
+            mer: { fee: calcMercari(sold) },
+            etsy: { fee: calcEtsy(sold) }
+        };
+
+        for (const key in results) {
+            results[key].profit = sold - results[key].fee - cost - shipping;
+        }
+
+        const format = n => "$" + n.toFixed(2);
+
+        // Pricing output
+        document.getElementById("ebay-profit").textContent = format(results.ebay.profit);
+        document.getElementById("ebay-fees").textContent = "Fees: " + format(results.ebay.fee);
+
+        document.getElementById("fb-profit").textContent = format(results.fb.profit);
+        document.getElementById("fb-fees").textContent = "Fees: " + format(results.fb.fee);
+
+        document.getElementById("mer-profit").textContent = format(results.mer.profit);
+        document.getElementById("mer-fees").textContent = "Fees: " + format(results.mer.fee);
+
+        document.getElementById("etsy-profit").textContent = format(results.etsy.profit);
+        document.getElementById("etsy-fees").textContent = "Fees: " + format(results.etsy.fee);
+
+        document.getElementById("results-section").style.display = "grid";
+    });
+
+    // Reset button
+    document.getElementById("reset-btn").addEventListener("click", () => {
+        document.getElementById("sold-price").value = "";
+        document.getElementById("item-cost").value = "";
+        document.getElementById("shipping-cost").value = "";
+        document.getElementById("results-section").style.display = "none";
+    });
+
+    // Hamburger
+    const ham = document.getElementById("hamburger-btn");
+    const menu = document.getElementById("menu-dropdown");
+    ham.addEventListener("click", () => menu.classList.toggle("active"));
+</script>
+
+</body>
+</html>
