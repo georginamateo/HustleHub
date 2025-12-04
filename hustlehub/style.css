@@ -714,6 +714,43 @@ body {
     font-style: italic;
 }
 
+/* Net Worth Modal Styles */
+.net-worth-display {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.net-worth-card {
+    background: linear-gradient(135deg, #4361ee, #3a0ca3);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+}
+
+.net-worth-card h3 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.net-worth-card .net-amount {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 15px 0;
+}
+
+.net-worth-card small {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
 /* Clear All Section */
 .clear-all-section {
     padding: 20px 30px;

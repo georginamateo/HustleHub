@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Net Worth | HustleHub</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .net-worth-page {
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .back-button {
+            margin-bottom: 20px;
+        }
+
+        .back-button .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .net-worth-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .net-worth-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(67, 97, 238, 0.3);
+        }
+
+        .net-worth-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .net-worth-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .net-worth-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .net-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .net-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .net-card-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #4361ee;
+        }
+
+        .net-card h2 {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .net-card-amount {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 20px 0;
+        }
+
+        .net-card-amount.positive {
+            color: #10b981;
+        }
+
+        .net-card-amount.negative {
+            color: #ef4444;
+        }
+
+        .net-card-period {
+            font-size: 0.95rem;
+            color: #6c757d;
+        }
+
+        .net-breakdown {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .net-breakdown h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .breakdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .breakdown-label {
+            font-size: 1.1rem;
+            color: #555;
+        }
+
+        .breakdown-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .breakdown-value.income {
+            color: #10b981;
+        }
+
+        .breakdown-value.expense {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="net-worth-page">
+        <div class="back-button">
+            <a href="index.html" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <div class="net-worth-container">
+            <div class="net-worth-header">
+                <h1><i class="fas fa-chart-line"></i> Net Worth Summary</h1>
+                <p>Track your earnings and expenses over time</p>
+            </div>
+
+            <div class="net-worth-cards">
+                <div class="net-card">
+                    <div class="net-card-icon">
+                        <i class="fas fa-calendar-week"></i>
+                    </div>
+                    <h2>Weekly Net Worth</h2>
+                    <div class="net-card-amount" id="weekly-net">$0.00</div>
+                    <div class="net-card-period">Last 7 days</div>
+                </div>
+
+                <div class="net-card">
+                    <div class="net-card-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h2>Monthly Net Worth</h2>
+                    <div class="net-card-amount" id="monthly-net">$0.00</div>
+                    <div class="net-card-period">Last 30 days</div>
+                </div>
+            </div>
+
+            <div class="net-breakdown">
+                <h2><i class="fas fa-chart-pie"></i> Breakdown</h2>
+                
+                <div class="breakdown-item">
+                    <span class="breakdown-label">Weekly Income</span>
+                    <span class="breakdown-value income" id="weekly-income">$0.00</span>
+                </div>
+                <div class="breakdown-item">
+                    <span class="breakdown-label">Weekly Expenses</span>
+                    <span class="breakdown-value expense" id="weekly-expenses">$0.00</span>
+                </div>
+                <div class="breakdown-item">
+                    <span class="breakdown-label">Monthly Income</span>
+                    <span class="breakdown-value income" id="monthly-income">$0.00</span>
+                </div>
+                <div class="breakdown-item">
+                    <span class="breakdown-label">Monthly Expenses</span>
+                    <span class="breakdown-value expense" id="monthly-expenses">$0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load transactions from localStorage
+        function loadTransactions() {
+            const savedData = localStorage.getItem('hustlehub-transactions');
+            if (savedData) {
+                try {
+                    return JSON.parse(savedData);
+                } catch (error) {
+                    console.error('Error loading transactions:', error);
+                    return [];
+                }
+            }
+            return [];
+        }
+
+        // Calculate net worth
+        function calculateNetWorth() {
+            const transactions = loadTransactions();
+            
+            // Calculate weekly (last 7 days)
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            
+            let weeklyIncome = 0;
+            let weeklyExpenses = 0;
+            let weeklyNet = 0;
+            
+            transactions.forEach(transaction => {
+                const transactionDate = new Date(transaction.date);
+                if (transactionDate >= oneWeekAgo) {
+                    if (transaction.amount > 0) {
+                        weeklyIncome += transaction.amount;
+                    } else {
+                        weeklyExpenses += Math.abs(transaction.amount);
+                    }
+                    weeklyNet += transaction.amount;
+                }
+            });
+            
+            // Calculate monthly (last 30 days)
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+            
+            let monthlyIncome = 0;
+            let monthlyExpenses = 0;
+            let monthlyNet = 0;
+            
+            transactions.forEach(transaction => {
+                const transactionDate = new Date(transaction.date);
+                if (transactionDate >= oneMonthAgo) {
+                    if (transaction.amount > 0) {
+                        monthlyIncome += transaction.amount;
+                    } else {
+                        monthlyExpenses += Math.abs(transaction.amount);
+                    }
+                    monthlyNet += transaction.amount;
+                }
+            });
+            
+            // Update display
+            const weeklyNetElement = document.getElementById('weekly-net');
+            weeklyNetElement.textContent = `$${weeklyNet.toFixed(2)}`;
+            weeklyNetElement.className = weeklyNet >= 0 ? 'net-card-amount positive' : 'net-card-amount negative';
+            
+            const monthlyNetElement = document.getElementById('monthly-net');
+            monthlyNetElement.textContent = `$${monthlyNet.toFixed(2)}`;
+            monthlyNetElement.className = monthlyNet >= 0 ? 'net-card-amount positive' : 'net-card-amount negative';
+            
+            document.getElementById('weekly-income').textContent = `$${weeklyIncome.toFixed(2)}`;
+            document.getElementById('weekly-expenses').textContent = `$${weeklyExpenses.toFixed(2)}`;
+            document.getElementById('monthly-income').textContent = `$${monthlyIncome.toFixed(2)}`;
+            document.getElementById('monthly-expenses').textContent = `$${monthlyExpenses.toFixed(2)}`;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', calculateNetWorth);
+    </script>
+</body>
+</html>

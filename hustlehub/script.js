@@ -88,10 +88,12 @@ function setupEventListeners() {
         });
     }
     
-    if (menuEditDelete) {
-        menuEditDelete.addEventListener('click', function() {
+    const menuNetWorth = document.getElementById('menu-net-worth');
+    if (menuNetWorth) {
+        menuNetWorth.addEventListener('click', function() {
             closeHamburgerMenu();
-            alert('Click the edit button (pencil icon) next to any transaction to edit it, or the delete button (trash icon) to remove it.');
+            // Navigate to net worth page
+            window.location.href = 'networth.html';
         });
     }
     
@@ -101,6 +103,9 @@ function setupEventListeners() {
     
     // Create Item Form Submission
     document.getElementById('create-item-form').addEventListener('submit', handleCreateItemSubmit);
+    
+    // Net Worth Modal Button
+    document.getElementById('close-net-worth-btn').addEventListener('click', hideNetWorthModal);
     
     // Close menu when clicking outside
     document.addEventListener('click', function(e) {
@@ -166,6 +171,12 @@ function setupEventListeners() {
             hideCreateItemForm();
         }
     });
+    
+    document.getElementById('net-worth-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideNetWorthModal();
+        }
+    });
 }
 
 // Close hamburger menu
@@ -191,6 +202,51 @@ function showCreateItemForm() {
 // Hide create item form
 function hideCreateItemForm() {
     document.getElementById('create-item-modal').style.display = 'none';
+}
+
+// Show net worth modal
+function showNetWorthModal() {
+    // Calculate weekly net (last 7 days)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    let weeklyNet = 0;
+    transactions.forEach(transaction => {
+        const transactionDate = new Date(transaction.date);
+        if (transactionDate >= oneWeekAgo) {
+            weeklyNet += transaction.amount;
+        }
+    });
+    
+    // Calculate monthly net (last 30 days)
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+    
+    let monthlyNet = 0;
+    transactions.forEach(transaction => {
+        const transactionDate = new Date(transaction.date);
+        if (transactionDate >= oneMonthAgo) {
+            monthlyNet += transaction.amount;
+        }
+    });
+    
+    // Update modal content
+    const weeklyElement = document.getElementById('modal-weekly-net');
+    const monthlyElement = document.getElementById('modal-monthly-net');
+    
+    weeklyElement.textContent = `$${weeklyNet.toFixed(2)}`;
+    weeklyElement.className = weeklyNet >= 0 ? 'net-amount positive' : 'net-amount negative';
+    
+    monthlyElement.textContent = `$${monthlyNet.toFixed(2)}`;
+    monthlyElement.className = monthlyNet >= 0 ? 'net-amount positive' : 'net-amount negative';
+    
+    // Show modal
+    document.getElementById('net-worth-modal').style.display = 'flex';
+}
+
+// Hide net worth modal
+function hideNetWorthModal() {
+    document.getElementById('net-worth-modal').style.display = 'none';
 }
 
 // Handle create item form submission
@@ -758,14 +814,8 @@ function updateSummary() {
     });
     
     // Update the DOM
-    document.getElementById('weekly-net').textContent = `$${weeklyNet.toFixed(2)}`;
-    document.getElementById('monthly-net').textContent = `$${monthlyNet.toFixed(2)}`;
     document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
     document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
-    
-    // Color code the weekly/monthly net
-    document.getElementById('weekly-net').className = weeklyNet >= 0 ? 'amount positive' : 'amount negative';
-    document.getElementById('monthly-net').className = monthlyNet >= 0 ? 'amount positive' : 'amount negative';
 }
 
 // Save data to localStorage
