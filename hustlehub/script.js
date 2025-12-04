@@ -22,6 +22,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Variables to store transactions
 let transactions = [];
+let editingTransactionId = null;
+
+// Active filters
+let activeFilters = {
+    gigTypes: ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other'],
+    categories: ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation'],
+    minAmount: null,
+    maxAmount: null
+};
 
 // Chart instances
 let incomeChart = null;
@@ -93,6 +102,19 @@ function setupEventListeners() {
         }
     });
 
+    // Filter controls
+    document.getElementById('filter-toggle-btn')?.addEventListener('click', showFilterModal);
+    document.getElementById('close-filter-btn')?.addEventListener('click', hideFilterModal);
+    document.getElementById('apply-filter-btn')?.addEventListener('click', applyFilters);
+    document.getElementById('reset-filter-btn')?.addEventListener('click', resetFilters);
+
+    // Close filter modal when clicking outside
+    document.getElementById('filter-modal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideFilterModal();
+        }
+    });
+
     // Chart Controls
     document.getElementById('chart-period')?.addEventListener('change', updateCharts);
     document.getElementById('prev-month-btn')?.addEventListener('click', () => navigateMonth(-1));
@@ -101,20 +123,40 @@ function setupEventListeners() {
 }
 
 // Show the add transaction form
-function showAddForm() {
+function showAddForm(transactionId = null) {
+    editingTransactionId = transactionId;
     document.getElementById('add-form-modal').style.display = 'flex';
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date-input').value = today;
-    document.getElementById('type-select').value = '';
-    document.getElementById('category-select').value = '';
-    document.getElementById('amount-input').value = '';
-    document.getElementById('description-input').value = '';
+    
+    if (transactionId) {
+        // Edit mode - populate form with existing data
+        const transaction = transactions.find(t => t.id === transactionId);
+        if (transaction) {
+            document.querySelector('.modal-header h2').innerHTML = '<i class="fas fa-edit"></i> Edit Transaction';
+            document.getElementById('date-input').value = transaction.date;
+            document.getElementById('type-select').value = transaction.type;
+            document.getElementById('category-select').value = transaction.category;
+            document.getElementById('amount-input').value = Math.abs(transaction.amount).toFixed(2);
+            document.getElementById('description-input').value = transaction.description;
+            document.querySelector('.form-actions button[type="submit"]').innerHTML = '<i class="fas fa-check"></i> Update Transaction';
+        }
+    } else {
+        // Add mode - reset form
+        document.querySelector('.modal-header h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Transaction';
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date-input').value = today;
+        document.getElementById('type-select').value = '';
+        document.getElementById('category-select').value = '';
+        document.getElementById('amount-input').value = '';
+        document.getElementById('description-input').value = '';
+        document.querySelector('.form-actions button[type="submit"]').innerHTML = '<i class="fas fa-check"></i> Add Transaction';
+    }
     document.getElementById('type-select').focus();
 }
 
 // Hide the add transaction form
 function hideAddForm() {
     document.getElementById('add-form-modal').style.display = 'none';
+    editingTransactionId = null;
 }
 
 // Handle form submission
@@ -136,20 +178,36 @@ function handleFormSubmit(e) {
         amount = -Math.abs(amount);
     }
 
-    const newTransaction = {
-        id: Date.now(),
-        date: date,
-        type: type,
-        category: category,
-        amount: amount,
-        description: description || `${category} from ${type}`
-    };
+    if (editingTransactionId) {
+        // Edit mode - update existing transaction
+        const index = transactions.findIndex(t => t.id === editingTransactionId);
+        if (index !== -1) {
+            transactions[index] = {
+                ...transactions[index],
+                date: date,
+                type: type,
+                category: category,
+                amount: amount,
+                description: description || `${category} from ${type}`
+            };
+        }
+    } else {
+        // Add mode - create new transaction
+        const newTransaction = {
+            id: Date.now(),
+            date: date,
+            type: type,
+            category: category,
+            amount: amount,
+            description: description || `${category} from ${type}`
+        };
+        transactions.push(newTransaction);
+    }
 
-    transactions.push(newTransaction);
     saveData();
     renderTable();
     updateSummary();
-    updateCharts(); // Update charts when new data is added
+    updateCharts(); // Update charts when data is added/edited
     hideAddForm();
 }
 
@@ -158,15 +216,39 @@ function renderTable() {
     const tableBody = document.getElementById('table-body');
     tableBody.innerHTML = '';
 
-    if (transactions.length === 0) {
+    // Filter transactions based on active filters
+    const filteredTransactions = transactions.filter(transaction => {
+        // Check gig type
+        if (!activeFilters.gigTypes.includes(transaction.type)) {
+            return false;
+        }
+
+        // Check category
+        if (!activeFilters.categories.includes(transaction.category)) {
+            return false;
+        }
+
+        // Check amount range
+        const absAmount = Math.abs(transaction.amount);
+        if (activeFilters.minAmount !== null && absAmount < activeFilters.minAmount) {
+            return false;
+        }
+        if (activeFilters.maxAmount !== null && absAmount > activeFilters.maxAmount) {
+            return false;
+        }
+
+        return true;
+    });
+
+    if (filteredTransactions.length === 0) {
         const emptyRow = document.createElement('tr');
         emptyRow.className = 'empty-row';
-        emptyRow.innerHTML = '<td colspan="5">No transactions yet. Click "Add New Transaction" to get started!</td>';
+        emptyRow.innerHTML = '<td colspan="5">No transactions match your filters. Try adjusting the filters or click "Reset Filters".</td>';
         tableBody.appendChild(emptyRow);
         return;
     }
 
-    const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sortedTransactions = [...filteredTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     sortedTransactions.forEach(transaction => {
         const row = document.createElement('tr');
@@ -220,7 +302,8 @@ function addRowActionListeners() {
 
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            alert('Edit functionality will be added in a future update!');
+            const id = parseInt(this.getAttribute('data-id'));
+            showAddForm(id);
         });
     });
 }
@@ -259,6 +342,80 @@ function toggleColumnVisibility() {
     elements.forEach(element => {
         element.style.display = isVisible ? '' : 'none';
     });
+}
+
+// Filter Modal Functions
+function showFilterModal() {
+    document.getElementById('filter-modal').style.display = 'flex';
+    
+    // Set current filter states in checkboxes
+    document.querySelectorAll('.gig-type-filter').forEach(checkbox => {
+        checkbox.checked = activeFilters.gigTypes.includes(checkbox.value);
+    });
+    
+    document.querySelectorAll('.category-filter').forEach(checkbox => {
+        checkbox.checked = activeFilters.categories.includes(checkbox.value);
+    });
+    
+    // Set amount range values
+    document.getElementById('min-amount-filter').value = activeFilters.minAmount || '';
+    document.getElementById('max-amount-filter').value = activeFilters.maxAmount || '';
+}
+
+function hideFilterModal() {
+    document.getElementById('filter-modal').style.display = 'none';
+}
+
+function applyFilters() {
+    // Get selected gig types
+    activeFilters.gigTypes = Array.from(document.querySelectorAll('.gig-type-filter:checked'))
+        .map(checkbox => checkbox.value);
+    
+    // Get selected categories
+    activeFilters.categories = Array.from(document.querySelectorAll('.category-filter:checked'))
+        .map(checkbox => checkbox.value);
+    
+    // Get amount range
+    const minAmount = parseFloat(document.getElementById('min-amount-filter').value);
+    const maxAmount = parseFloat(document.getElementById('max-amount-filter').value);
+    
+    activeFilters.minAmount = isNaN(minAmount) ? null : minAmount;
+    activeFilters.maxAmount = isNaN(maxAmount) ? null : maxAmount;
+    
+    // Validate amount range
+    if (activeFilters.minAmount !== null && activeFilters.maxAmount !== null) {
+        if (activeFilters.minAmount > activeFilters.maxAmount) {
+            alert('Minimum amount cannot be greater than maximum amount.');
+            return;
+        }
+    }
+    
+    // Re-render table with filters
+    renderTable();
+    hideFilterModal();
+}
+
+function resetFilters() {
+    // Reset to default (all checked)
+    activeFilters.gigTypes = ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other'];
+    activeFilters.categories = ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation'];
+    activeFilters.minAmount = null;
+    activeFilters.maxAmount = null;
+    
+    // Update UI
+    document.querySelectorAll('.gig-type-filter').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    
+    document.querySelectorAll('.category-filter').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    
+    document.getElementById('min-amount-filter').value = '';
+    document.getElementById('max-amount-filter').value = '';
+    
+    // Re-render table
+    renderTable();
 }
 
 function updateSummary() {
