@@ -23,7 +23,7 @@ let editingTransactionId = null;
 let customGigTypes = [];
 let customCategories = [];
 
-// Active filters
+// Active filters - initialize with all default filters enabled
 let activeFilters = {
     gigTypes: ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other'],
     categories: ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation'],
@@ -62,31 +62,20 @@ function setupEventListeners() {
     document.getElementById('delete-item-form')?.addEventListener('submit', handleDeleteItemSubmit);
     document.getElementById('delete-item-type-select')?.addEventListener('change', updateDeleteItemOptions);
 
-    // Add Row Button
-    const addRowBtn = document.getElementById('add-row-btn');
-    if (addRowBtn) {
-        addRowBtn.addEventListener('click', showAddForm);
-    } else {
-        console.error('Add New Transaction button not found');
-    }
-
-    // Close Modal Buttons
-    const closeModalBtn = document.getElementById('close-modal-btn');
-    const cancelBtn = document.getElementById('cancel-btn');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', hideAddForm);
-    }
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', hideAddForm);
-    }
-
-    // Form Submission
-    const transactionForm = document.getElementById('transaction-form');
-    if (transactionForm) {
-        transactionForm.addEventListener('submit', handleFormSubmit);
-    } else {
-        console.error('transaction-form not found');
-    }
+    // Transaction form code removed
+    
+    // New Transaction Form
+    document.getElementById('add-row-btn')?.addEventListener('click', showTransactionModal);
+    document.getElementById('close-transaction-modal')?.addEventListener('click', hideTransactionModal);
+    document.getElementById('cancel-transaction-btn')?.addEventListener('click', hideTransactionModal);
+    document.getElementById('new-transaction-form')?.addEventListener('submit', handleTransactionSubmit);
+    
+    // Close modal when clicking outside
+    document.getElementById('transaction-modal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideTransactionModal();
+        }
+    });
 
     // Clear All Button
     document.getElementById('clear-btn').addEventListener('click', clearAllTransactions);
@@ -96,15 +85,7 @@ function setupEventListeners() {
         checkbox.addEventListener('change', toggleColumnVisibility);
     });
 
-    // Close modal when clicking outside
-    const addFormModal = document.getElementById('add-form-modal');
-    if (addFormModal) {
-        addFormModal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideAddForm();
-            }
-        });
-    }
+    // Modal click outside code removed
 
     // Filter controls
     document.getElementById('filter-toggle-btn')?.addEventListener('click', showFilterModal);
@@ -171,6 +152,8 @@ function handleCreateItemSubmit(e) {
             return;
         }
         customGigTypes.push(itemName);
+        // Add to active filters
+        activeFilters.gigTypes.push(itemName);
         updateGigTypeOptions();
         alert(`Gig Type "${itemName}" has been created!`);
     } else if (itemType === 'category') {
@@ -181,6 +164,8 @@ function handleCreateItemSubmit(e) {
             return;
         }
         customCategories.push(itemName);
+        // Add to active filters
+        activeFilters.categories.push(itemName);
         updateCategoryOptions();
         alert(`Category "${itemName}" has been created!`);
     }
@@ -297,9 +282,9 @@ function handleDeleteItemSubmit(e) {
 }
 
 function updateGigTypeOptions() {
-    const typeSelect = document.getElementById('type-select');
+    const typeSelect = document.getElementById('transaction-gig-type');
     if (!typeSelect) {
-        console.error('type-select element not found');
+        console.error('transaction-gig-type element not found');
         return;
     }
     
@@ -336,9 +321,9 @@ function updateGigTypeOptions() {
 }
 
 function updateCategoryOptions() {
-    const categorySelect = document.getElementById('category-select');
+    const categorySelect = document.getElementById('transaction-category');
     if (!categorySelect) {
-        console.error('category-select element not found');
+        console.error('transaction-category element not found');
         return;
     }
     
@@ -399,113 +384,125 @@ function loadCustomItems() {
         }
     }
     
+    // Add custom items to activeFilters if not already there
+    customGigTypes.forEach(type => {
+        if (!activeFilters.gigTypes.includes(type)) {
+            activeFilters.gigTypes.push(type);
+        }
+    });
+    
+    customCategories.forEach(category => {
+        if (!activeFilters.categories.includes(category)) {
+            activeFilters.categories.push(category);
+        }
+    });
+    
     // Update options after loading
     updateGigTypeOptions();
     updateCategoryOptions();
 }
 
 // Show the add transaction form
-function showAddForm(transactionId = null) {
-    editingTransactionId = transactionId;
+// Transaction form functions removed
+
+// Show transaction modal
+function showTransactionModal() {
+    editingTransactionId = null;
+    const modal = document.getElementById('transaction-modal');
+    const form = document.getElementById('new-transaction-form');
+    const modalHeader = document.querySelector('#transaction-modal .modal-header h2');
+    const submitButton = document.querySelector('#new-transaction-form button[type="submit"]');
     
-    const modal = document.getElementById('add-form-modal');
-    if (!modal) {
-        console.error('add-form-modal element not found');
-        alert('Error: Transaction form modal not found. Please refresh the page.');
-        return;
-    }
-    
-    // Show modal
-    modal.style.display = 'flex';
-    
-    // Get form elements
-    const modalHeader = document.querySelector('#add-form-modal .modal-header h2');
-    const dateInput = document.getElementById('date-input');
-    const typeSelect = document.getElementById('type-select');
-    const categorySelect = document.getElementById('category-select');
-    const amountInput = document.getElementById('amount-input');
-    const descriptionInput = document.getElementById('description-input');
-    const submitButton = document.querySelector('#transaction-form button[type="submit"]');
-    
-    // Check if all elements exist
-    if (!modalHeader || !dateInput || !typeSelect || !categorySelect || !amountInput || !descriptionInput || !submitButton) {
-        console.error('Some form elements are missing');
-        alert('Error: Form elements not found. Please refresh the page.');
-        return;
-    }
-    
-    if (transactionId) {
-        // Edit mode - populate form with existing data
-        const transaction = transactions.find(t => t.id === transactionId);
-        if (transaction) {
-            modalHeader.innerHTML = '<i class="fas fa-edit"></i> Edit Transaction';
-            dateInput.value = transaction.date;
-            typeSelect.value = transaction.type;
-            categorySelect.value = transaction.category;
-            amountInput.value = Math.abs(transaction.amount).toFixed(2);
-            descriptionInput.value = transaction.description;
-            submitButton.innerHTML = '<i class="fas fa-check"></i> Update Transaction';
-        }
-    } else {
-        // Add mode - reset form
-        modalHeader.innerHTML = '<i class="fas fa-plus-circle"></i> Add New Transaction';
+    if (modal && form) {
+        // Reset form
+        form.reset();
+        
+        // Set today's date as default
         const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
-        typeSelect.value = '';
-        categorySelect.value = '';
-        amountInput.value = '';
-        descriptionInput.value = '';
-        submitButton.innerHTML = '<i class="fas fa-check"></i> Add Transaction';
+        document.getElementById('transaction-date').value = today;
+        
+        // Update header and button for add mode
+        if (modalHeader) {
+            modalHeader.innerHTML = '<i class="fas fa-plus-circle"></i> New Transaction';
+        }
+        if (submitButton) {
+            submitButton.innerHTML = '<i class="fas fa-check"></i> Add Transaction';
+        }
+        
+        // Show modal
+        modal.style.display = 'flex';
+        
+        // Focus on gig type field
+        setTimeout(() => document.getElementById('transaction-gig-type').focus(), 100);
     }
-    
-    // Focus on first field
-    setTimeout(() => typeSelect.focus(), 100);
 }
 
-// Hide the add transaction form
-function hideAddForm() {
-    const modal = document.getElementById('add-form-modal');
+// Edit transaction
+function editTransaction(id) {
+    const transaction = transactions.find(t => t.id === id);
+    if (!transaction) return;
+    
+    editingTransactionId = id;
+    const modal = document.getElementById('transaction-modal');
+    const modalHeader = document.querySelector('#transaction-modal .modal-header h2');
+    const submitButton = document.querySelector('#new-transaction-form button[type="submit"]');
+    
+    if (modal) {
+        // Populate form with transaction data
+        document.getElementById('transaction-date').value = transaction.date;
+        document.getElementById('transaction-gig-type').value = transaction.type;
+        document.getElementById('transaction-category').value = transaction.category;
+        document.getElementById('transaction-amount').value = Math.abs(transaction.amount).toFixed(2);
+        document.getElementById('transaction-description').value = transaction.description;
+        
+        // Update header and button for edit mode
+        if (modalHeader) {
+            modalHeader.innerHTML = '<i class="fas fa-edit"></i> Edit Transaction';
+        }
+        if (submitButton) {
+            submitButton.innerHTML = '<i class="fas fa-check"></i> Update Transaction';
+        }
+        
+        // Show modal
+        modal.style.display = 'flex';
+        
+        // Focus on gig type field
+        setTimeout(() => document.getElementById('transaction-gig-type').focus(), 100);
+    }
+}
+
+// Hide transaction modal
+function hideTransactionModal() {
+    const modal = document.getElementById('transaction-modal');
     if (modal) {
         modal.style.display = 'none';
     }
-    editingTransactionId = null;
 }
 
-// Handle form submission
-function handleFormSubmit(e) {
+// Handle transaction form submission
+function handleTransactionSubmit(e) {
     e.preventDefault();
-
-    const date = document.getElementById('date-input').value;
-    const type = document.getElementById('type-select').value;
-    const category = document.getElementById('category-select').value;
-    let amount = parseFloat(document.getElementById('amount-input').value);
-    const description = document.getElementById('description-input').value;
-
-    // Validate required fields
-    if (!date) {
-        alert('Please select a date');
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    const date = formData.get('date');
+    const gigType = formData.get('gigType');
+    const category = formData.get('category');
+    let amount = parseFloat(formData.get('amount'));
+    const description = formData.get('description');
+    
+    // Validate amount
+    if (isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid amount greater than 0');
         return;
     }
     
-    if (!type) {
-        alert('Please select a gig type');
-        return;
-    }
-    
-    if (!category) {
-        alert('Please select a category');
-        return;
-    }
-
-    if (isNaN(amount) || amount === 0) {
-        alert('Please enter a valid amount');
-        return;
-    }
-
+    // Make expenses negative
     if (category === 'Expense' || category === 'Fees' || category === 'Supplies' || category === 'Transportation') {
         amount = -Math.abs(amount);
     }
-
+    
     if (editingTransactionId) {
         // Edit mode - update existing transaction
         const index = transactions.findIndex(t => t.id === editingTransactionId);
@@ -513,34 +510,43 @@ function handleFormSubmit(e) {
             transactions[index] = {
                 ...transactions[index],
                 date: date,
-                type: type,
+                type: gigType,
                 category: category,
                 amount: amount,
-                description: description || `${category} from ${type}`
+                description: description || `${category} from ${gigType}`
             };
-            console.log('Transaction updated:', transactions[index]);
-            alert('Transaction updated successfully!');
         }
+        
+        // Save and update display
+        saveData();
+        renderTable();
+        updateSummary();
+        
+        // Close modal and show success message
+        hideTransactionModal();
+        alert('Transaction updated successfully!');
     } else {
         // Add mode - create new transaction
         const newTransaction = {
             id: Date.now(),
             date: date,
-            type: type,
+            type: gigType,
             category: category,
             amount: amount,
-            description: description || `${category} from ${type}`
+            description: description || `${category} from ${gigType}`
         };
+        
         transactions.push(newTransaction);
-        console.log('New transaction added:', newTransaction);
-        console.log('Total transactions:', transactions.length);
+        
+        // Save and update display
+        saveData();
+        renderTable();
+        updateSummary();
+        
+        // Close modal and show success message
+        hideTransactionModal();
         alert('Transaction added successfully!');
     }
-
-    saveData();
-    renderTable();
-    updateSummary();
-    hideAddForm();
 }
 
 // Render the table with all transactions
@@ -619,6 +625,18 @@ function renderTable() {
         `;
 
         tableBody.appendChild(row);
+
+        // Add description row if description exists
+        if (transaction.description && transaction.description.trim() !== '') {
+            const descRow = document.createElement('tr');
+            descRow.className = transaction.amount > 0 ? 'income-row description-row' : 'expense-row description-row';
+            descRow.innerHTML = `
+                <td colspan="5" class="description-cell">
+                    <span class="description-text">${transaction.description}</span>
+                </td>
+            `;
+            tableBody.appendChild(descRow);
+        }
     });
 
     addRowActionListeners();
@@ -635,7 +653,7 @@ function addRowActionListeners() {
     document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = parseInt(this.getAttribute('data-id'));
-            showAddForm(id);
+            editTransaction(id);
         });
     });
 }
@@ -726,13 +744,19 @@ function applyFilters() {
 }
 
 function resetFilters() {
-    // Reset to default (all checked)
-    activeFilters.gigTypes = ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other'];
-    activeFilters.categories = ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation'];
+    // Collect all available gig types (default + custom)
+    const allGigTypes = ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other', ...customGigTypes];
+    
+    // Collect all available categories (default + custom)
+    const allCategories = ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation', ...customCategories];
+    
+    // Reset to all checked
+    activeFilters.gigTypes = allGigTypes;
+    activeFilters.categories = allCategories;
     activeFilters.minAmount = null;
     activeFilters.maxAmount = null;
     
-    // Update UI
+    // Update UI - check all checkboxes
     document.querySelectorAll('.gig-type-filter').forEach(checkbox => {
         checkbox.checked = true;
     });
@@ -785,7 +809,32 @@ function loadSavedData() {
         } catch (error) {
             console.error('Error loading saved data:', error);
         }
+    } else {
+        // Add sample data if no saved data exists
+        addSampleData();
     }
+}
+
+// Add sample transaction data
+function addSampleData() {
+    transactions = [
+        { id: 1, date: '2024-11-05', type: 'DoorDash', category: 'Income', amount: 45.50, description: 'Dinner delivery shift' },
+        { id: 2, date: '2024-11-08', type: 'Uber', category: 'Income', amount: 78.25, description: 'Weekend rides' },
+        { id: 3, date: '2024-11-10', type: 'DoorDash', category: 'Expense', amount: -12.00, description: 'Gas for deliveries' },
+        { id: 4, date: '2024-11-12', type: 'eBay', category: 'Income', amount: 125.00, description: 'Sold vintage camera' },
+        { id: 5, date: '2024-11-15', type: 'Freelance', category: 'Income', amount: 250.00, description: 'Website design project' },
+        { id: 6, date: '2024-11-18', type: 'DoorDash', category: 'Fees', amount: -5.50, description: 'Platform service fee' },
+        { id: 7, date: '2024-11-20', type: 'Uber', category: 'Income', amount: 92.75, description: 'Airport trips' },
+        { id: 8, date: '2024-11-22', type: 'eBay', category: 'Supplies', amount: -25.00, description: 'Shipping materials' },
+        { id: 9, date: '2024-11-25', type: 'DoorDash', category: 'Income', amount: 67.00, description: 'Holiday dinner rush' },
+        { id: 10, date: '2024-11-28', type: 'Freelance', category: 'Income', amount: 180.00, description: 'Logo design' },
+        { id: 11, date: '2024-12-01', type: 'Uber', category: 'Transportation', amount: -30.00, description: 'Car maintenance' },
+        { id: 12, date: '2024-12-02', type: 'DoorDash', category: 'Income', amount: 55.25, description: 'Lunch delivery shift' },
+        { id: 13, date: '2024-12-03', type: 'eBay', category: 'Income', amount: 95.00, description: 'Sold collectible toy' },
+        { id: 14, date: '2024-12-04', type: 'Other', category: 'Income', amount: 50.00, description: 'Pet sitting' },
+        { id: 15, date: '2024-12-04', type: 'DoorDash', category: 'Expense', amount: -18.50, description: 'Gas refill' }
+    ];
+    saveData();
 }
 
 // ==========================================

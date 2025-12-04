@@ -233,23 +233,23 @@
             </div>
         </main>
 
-        <!-- Add Transaction Form (Hidden by default) -->
-        <div id="add-form-modal" class="modal">
+        <!-- New Transaction Form -->
+        <div id="transaction-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2><i class="fas fa-plus-circle"></i> Add New Transaction</h2>
-                    <button id="close-modal-btn" class="close-btn">&times;</button>
+                    <h2><i class="fas fa-plus-circle"></i> New Transaction</h2>
+                    <button id="close-transaction-modal" class="close-btn">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <form id="transaction-form">
+                    <form id="new-transaction-form">
                         <div class="form-group">
-                            <label for="date-input"><i class="fas fa-calendar-day"></i> Date:</label>
-                            <input type="date" id="date-input" required>
+                            <label for="transaction-date"><i class="fas fa-calendar-day"></i> Date:</label>
+                            <input type="date" id="transaction-date" name="date" required>
                         </div>
                         
                         <div class="form-group">
-                            <label for="type-select"><i class="fas fa-briefcase"></i> Gig Type:</label>
-                            <select id="type-select" required>
+                            <label for="transaction-gig-type"><i class="fas fa-briefcase"></i> Gig Type:</label>
+                            <select id="transaction-gig-type" name="gigType" required>
                                 <option value="">Select gig type...</option>
                                 <option value="DoorDash">DoorDash</option>
                                 <option value="Uber">Uber</option>
@@ -260,8 +260,8 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="category-select"><i class="fas fa-tag"></i> Category:</label>
-                            <select id="category-select" required>
+                            <label for="transaction-category"><i class="fas fa-tag"></i> Category:</label>
+                            <select id="transaction-category" name="category" required>
                                 <option value="">Select category...</option>
                                 <option value="Income">Income</option>
                                 <option value="Expense">Expense</option>
@@ -272,23 +272,23 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="amount-input"><i class="fas fa-dollar-sign"></i> Amount:</label>
+                            <label for="transaction-amount"><i class="fas fa-dollar-sign"></i> Amount:</label>
                             <div class="amount-input-wrapper">
                                 <span class="currency">$</span>
-                                <input type="number" id="amount-input" step="0.01" min="0" placeholder="0.00" required>
+                                <input type="number" id="transaction-amount" name="amount" step="0.01" min="0.01" placeholder="0.00" required>
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="description-input"><i class="fas fa-sticky-note"></i> Description (optional):</label>
-                            <input type="text" id="description-input" placeholder="e.g., 'Gas for deliveries', 'Sold custom shirt'">
+                            <label for="transaction-description"><i class="fas fa-sticky-note"></i> Description (optional):</label>
+                            <input type="text" id="transaction-description" name="description" placeholder="e.g., 'Gas for deliveries', 'Sold custom shirt'">
                         </div>
                         
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-check"></i> Add Transaction
                             </button>
-                            <button type="button" id="cancel-btn" class="btn btn-secondary">
+                            <button type="button" id="cancel-transaction-btn" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Cancel
                             </button>
                         </div>

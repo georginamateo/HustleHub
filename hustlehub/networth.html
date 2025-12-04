@@ -28,6 +28,7 @@
         <section class="dashboard-summary">
             <div class="summary-card networth-card">
                 <h3><i class="fas fa-calendar-alt"></i> Monthly Net</h3>
+                <p class="date-range" id="monthly-period">Last 30 Days</p>
                 <p class="amount" id="monthly-net">$0.00</p>
                 <div class="breakdown">
                     <div class="breakdown-item">
@@ -42,6 +43,7 @@
             </div>
             <div class="summary-card networth-card">
                 <h3><i class="fas fa-calendar-week"></i> Weekly Net</h3>
+                <p class="date-range" id="weekly-period">Last 7 Days</p>
                 <p class="amount" id="weekly-net">$0.00</p>
                 <div class="breakdown">
                     <div class="breakdown-item">
@@ -73,6 +75,20 @@
             </div>
             
             <div class="chart-container">
+                <div class="chart-header">
+                    <h3><i class="fas fa-chart-pie"></i> Expenses by Gig Type</h3>
+                    <div class="chart-controls">
+                        <select id="expense-gig-type-filter">
+                            <option value="all">All Gig Types</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="expense-chart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container full-width">
                 <div class="chart-header">
                     <h3><i class="fas fa-chart-bar"></i> Monthly Performance</h3>
                     <div class="chart-controls">
@@ -123,6 +139,7 @@
 
         // Chart instances
         let incomeChart = null;
+        let expenseChart = null;
         let monthlyChart = null;
         let trendChart = null;
 
@@ -136,6 +153,8 @@
                 return;
             }
 
+            const now = new Date();
+            
             // Calculate weekly net (last 7 days)
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -173,11 +192,19 @@
                 }
             });
 
+            // Format date ranges
+            const weeklyPeriod = `${oneWeekAgo.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            const monthlyPeriod = `${oneMonthAgo.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            
+            // Update weekly display
+            document.getElementById('weekly-period').textContent = weeklyPeriod;
             document.getElementById('weekly-net').textContent = `$${weeklyNet.toFixed(2)}`;
             document.getElementById('weekly-net').className = weeklyNet >= 0 ? 'amount positive' : 'amount negative';
             document.getElementById('weekly-income').textContent = `$${weeklyIncome.toFixed(2)}`;
             document.getElementById('weekly-expenses').textContent = `$${weeklyExpenses.toFixed(2)}`;
 
+            // Update monthly display
+            document.getElementById('monthly-period').textContent = monthlyPeriod;
             document.getElementById('monthly-net').textContent = `$${monthlyNet.toFixed(2)}`;
             document.getElementById('monthly-net').className = monthlyNet >= 0 ? 'amount positive' : 'amount negative';
             document.getElementById('monthly-income').textContent = `$${monthlyIncome.toFixed(2)}`;
@@ -201,6 +228,26 @@
                 option.value = type;
                 option.textContent = type;
                 gigTypeFilter.appendChild(option);
+            });
+        }
+
+        // Populate expense gig type filter dropdown
+        function populateExpenseGigTypeFilter() {
+            const gigTypes = new Set();
+            transactions.forEach(transaction => {
+                if (transaction.amount < 0) { // Only expense transactions
+                    gigTypes.add(transaction.type);
+                }
+            });
+            
+            const expenseGigTypeFilter = document.getElementById('expense-gig-type-filter');
+            expenseGigTypeFilter.innerHTML = '<option value="all">All Gig Types</option>';
+            
+            Array.from(gigTypes).sort().forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                expenseGigTypeFilter.appendChild(option);
             });
         }
 
@@ -234,6 +281,72 @@
             }
             
             incomeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: types,
+                    datasets: [{
+                        data: amounts,
+                        backgroundColor: colors.slice(0, types.length),
+                        borderColor: 'white',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const total = amounts.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${context.label}: $${value.toFixed(2)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update expense by gig type chart
+        function updateExpenseChart() {
+            const selectedGigType = document.getElementById('expense-gig-type-filter').value;
+            
+            const expensesByType = {};
+            
+            transactions.forEach(transaction => {
+                if (transaction.amount < 0) {
+                    // Filter by selected gig type if not "all"
+                    if (selectedGigType === 'all' || transaction.type === selectedGigType) {
+                        if (!expensesByType[transaction.type]) {
+                            expensesByType[transaction.type] = 0;
+                        }
+                        expensesByType[transaction.type] += Math.abs(transaction.amount);
+                    }
+                }
+            });
+            
+            const types = Object.keys(expensesByType);
+            const amounts = Object.values(expensesByType);
+            
+            const colors = ['#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+            
+            const ctx = document.getElementById('expense-chart').getContext('2d');
+            
+            if (expenseChart) {
+                expenseChart.destroy();
+            }
+            
+            expenseChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: types,
@@ -472,6 +585,7 @@
         // Update all charts
         function updateCharts() {
             updateIncomeChart();
+            updateExpenseChart();
             updateMonthlyChart();
             updateTrendChart();
         }
@@ -480,10 +594,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             calculateNetWorth();
             populateGigTypeFilter();
+            populateExpenseGigTypeFilter();
             updateCharts();
 
             // Event listeners
             document.getElementById('gig-type-filter')?.addEventListener('change', updateIncomeChart);
+            document.getElementById('expense-gig-type-filter')?.addEventListener('change', updateExpenseChart);
             document.getElementById('prev-month-btn')?.addEventListener('click', () => navigateMonth(-1));
             document.getElementById('next-month-btn')?.addEventListener('click', () => navigateMonth(1));
             document.getElementById('trend-period')?.addEventListener('change', updateCharts);
