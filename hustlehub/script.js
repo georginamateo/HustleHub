@@ -104,9 +104,6 @@ function setupEventListeners() {
     // Create Item Form Submission
     document.getElementById('create-item-form').addEventListener('submit', handleCreateItemSubmit);
     
-    // Net Worth Modal Button
-    document.getElementById('close-net-worth-btn').addEventListener('click', hideNetWorthModal);
-    
     // Close menu when clicking outside
     document.addEventListener('click', function(e) {
         if (menuDropdown && !hamburgerBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
@@ -202,51 +199,6 @@ function showCreateItemForm() {
 // Hide create item form
 function hideCreateItemForm() {
     document.getElementById('create-item-modal').style.display = 'none';
-}
-
-// Show net worth modal
-function showNetWorthModal() {
-    // Calculate weekly net (last 7 days)
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
-    let weeklyNet = 0;
-    transactions.forEach(transaction => {
-        const transactionDate = new Date(transaction.date);
-        if (transactionDate >= oneWeekAgo) {
-            weeklyNet += transaction.amount;
-        }
-    });
-    
-    // Calculate monthly net (last 30 days)
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-    
-    let monthlyNet = 0;
-    transactions.forEach(transaction => {
-        const transactionDate = new Date(transaction.date);
-        if (transactionDate >= oneMonthAgo) {
-            monthlyNet += transaction.amount;
-        }
-    });
-    
-    // Update modal content
-    const weeklyElement = document.getElementById('modal-weekly-net');
-    const monthlyElement = document.getElementById('modal-monthly-net');
-    
-    weeklyElement.textContent = `$${weeklyNet.toFixed(2)}`;
-    weeklyElement.className = weeklyNet >= 0 ? 'net-amount positive' : 'net-amount negative';
-    
-    monthlyElement.textContent = `$${monthlyNet.toFixed(2)}`;
-    monthlyElement.className = monthlyNet >= 0 ? 'net-amount positive' : 'net-amount negative';
-    
-    // Show modal
-    document.getElementById('net-worth-modal').style.display = 'flex';
-}
-
-// Hide net worth modal
-function hideNetWorthModal() {
-    document.getElementById('net-worth-modal').style.display = 'none';
 }
 
 // Handle create item form submission
@@ -850,3 +802,70 @@ function formatCurrency(amount) {
         currency: 'USD'
     }).format(amount);
 }
+
+// AI Widget Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const aiToggleBtn = document.getElementById('ai-toggle-btn');
+    const aiChatWindow = document.getElementById('ai-chat-window');
+    const aiCloseBtn = document.getElementById('ai-close-btn');
+    const aiSendBtn = document.getElementById('ai-send-btn');
+    const aiInput = document.getElementById('ai-input');
+    const aiMessages = document.getElementById('ai-messages');
+
+    // Toggle chat window
+    if (aiToggleBtn) {
+        aiToggleBtn.addEventListener('click', function() {
+            if (aiChatWindow.style.display === 'none') {
+                aiChatWindow.style.display = 'flex';
+            } else {
+                aiChatWindow.style.display = 'none';
+            }
+        });
+    }
+
+    // Close chat window
+    if (aiCloseBtn) {
+        aiCloseBtn.addEventListener('click', function() {
+            aiChatWindow.style.display = 'none';
+        });
+    }
+
+    // Send message
+    function sendMessage() {
+        const message = aiInput.value.trim();
+        if (message) {
+            // Add user message
+            const userMsg = document.createElement('div');
+            userMsg.className = 'message user';
+            userMsg.textContent = message;
+            aiMessages.appendChild(userMsg);
+
+            // Clear input
+            aiInput.value = '';
+
+            // Scroll to bottom
+            aiMessages.scrollTop = aiMessages.scrollHeight;
+
+            // Simulate bot response
+            setTimeout(function() {
+                const botMsg = document.createElement('div');
+                botMsg.className = 'message bot';
+                botMsg.textContent = "I'm sorry, the AI assistant is currently under development. Please use the 'Add New Transaction' button to manually add your gig earnings and expenses.";
+                aiMessages.appendChild(botMsg);
+                aiMessages.scrollTop = aiMessages.scrollHeight;
+            }, 1000);
+        }
+    }
+
+    if (aiSendBtn) {
+        aiSendBtn.addEventListener('click', sendMessage);
+    }
+
+    if (aiInput) {
+        aiInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    }
+});
