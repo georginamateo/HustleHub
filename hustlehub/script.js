@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load any saved data from localStorage
     loadSavedData();
     
+    // Load custom items
+    loadCustomItems();
+    
     // Update summary calculations
     updateSummary();
 });
@@ -25,6 +28,10 @@ let activeFilters = {
     minAmount: null,
     maxAmount: null
 };
+
+// Store custom gig types and categories
+let customGigTypes = ['DoorDash', 'Uber', 'eBay', 'Freelance', 'Other'];
+let customCategories = ['Income', 'Expense', 'Fees', 'Supplies', 'Transportation'];
 
 // Initialize the app
 function initializeApp() {
@@ -77,7 +84,7 @@ function setupEventListeners() {
     if (menuCreate) {
         menuCreate.addEventListener('click', function() {
             closeHamburgerMenu();
-            showAddForm();
+            showCreateItemForm();
         });
     }
     
@@ -87,6 +94,13 @@ function setupEventListeners() {
             alert('Click the edit button (pencil icon) next to any transaction to edit it, or the delete button (trash icon) to remove it.');
         });
     }
+    
+    // Create Item Modal Buttons
+    document.getElementById('close-create-item-btn').addEventListener('click', hideCreateItemForm);
+    document.getElementById('cancel-create-item-btn').addEventListener('click', hideCreateItemForm);
+    
+    // Create Item Form Submission
+    document.getElementById('create-item-form').addEventListener('submit', handleCreateItemSubmit);
     
     // Close menu when clicking outside
     document.addEventListener('click', function(e) {
@@ -146,6 +160,12 @@ function setupEventListeners() {
             hideFilterMenu();
         }
     });
+    
+    document.getElementById('create-item-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideCreateItemForm();
+        }
+    });
 }
 
 // Close hamburger menu
@@ -158,6 +178,160 @@ function closeHamburgerMenu() {
     }
     if (menuDropdown) {
         menuDropdown.classList.remove('show');
+    }
+}
+
+// Show create item form
+function showCreateItemForm() {
+    document.getElementById('create-item-modal').style.display = 'flex';
+    document.getElementById('item-type-select').value = '';
+    document.getElementById('item-name-input').value = '';
+}
+
+// Hide create item form
+function hideCreateItemForm() {
+    document.getElementById('create-item-modal').style.display = 'none';
+}
+
+// Handle create item form submission
+function handleCreateItemSubmit(e) {
+    e.preventDefault();
+    
+    const itemType = document.getElementById('item-type-select').value;
+    const itemName = document.getElementById('item-name-input').value.trim();
+    
+    if (!itemName) {
+        alert('Please enter a name for the item.');
+        return;
+    }
+    
+    // Case-insensitive duplicate check
+    let isDuplicate = false;
+    let existingList = [];
+    
+    if (itemType === 'gigType') {
+        existingList = customGigTypes;
+    } else if (itemType === 'category') {
+        existingList = customCategories;
+    }
+    
+    // Check for duplicates (case-insensitive)
+    isDuplicate = existingList.some(item => item.toLowerCase() === itemName.toLowerCase());
+    
+    if (isDuplicate) {
+        alert(`Error: "${itemName}" already exists! Please choose a different name.\n\nNote: Names are case-insensitive (e.g., "DoorDash" and "doordash" are considered the same).`);
+        return;
+    }
+    
+    // Add the new item
+    if (itemType === 'gigType') {
+        customGigTypes.push(itemName);
+        activeFilters.gigTypes.push(itemName);
+        updateGigTypeOptions();
+        alert(`Success! New Gig Type "${itemName}" has been created.`);
+    } else if (itemType === 'category') {
+        customCategories.push(itemName);
+        activeFilters.categories.push(itemName);
+        updateCategoryOptions();
+        alert(`Success! New Category "${itemName}" has been created.`);
+    }
+    
+    // Save to localStorage
+    saveCustomItems();
+    
+    // Hide the form
+    hideCreateItemForm();
+}
+
+// Update gig type options in forms and filters
+function updateGigTypeOptions() {
+    // Update transaction form dropdown
+    const typeSelect = document.getElementById('type-select');
+    if (typeSelect) {
+        typeSelect.innerHTML = '<option value="">Select gig type...</option>';
+        customGigTypes.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            typeSelect.appendChild(option);
+        });
+    }
+    
+    // Update filter checkboxes
+    const filterContainer = document.querySelector('.gig-type-filter')?.parentElement?.parentElement;
+    if (filterContainer) {
+        filterContainer.innerHTML = '';
+        customGigTypes.forEach(type => {
+            const label = document.createElement('label');
+            label.className = 'filter-checkbox';
+            label.innerHTML = `
+                <input type="checkbox" class="gig-type-filter" value="${type}" checked>
+                <span>${type}</span>
+            `;
+            filterContainer.appendChild(label);
+        });
+    }
+}
+
+// Update category options in forms and filters
+function updateCategoryOptions() {
+    // Update transaction form dropdown
+    const categorySelect = document.getElementById('category-select');
+    if (categorySelect) {
+        categorySelect.innerHTML = '<option value="">Select category...</option>';
+        customCategories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    }
+    
+    // Update filter checkboxes
+    const filterContainer = document.querySelector('.category-filter')?.parentElement?.parentElement;
+    if (filterContainer) {
+        filterContainer.innerHTML = '';
+        customCategories.forEach(category => {
+            const label = document.createElement('label');
+            label.className = 'filter-checkbox';
+            label.innerHTML = `
+                <input type="checkbox" class="category-filter" value="${category}" checked>
+                <span>${category}</span>
+            `;
+            filterContainer.appendChild(label);
+        });
+    }
+}
+
+// Save custom items to localStorage
+function saveCustomItems() {
+    localStorage.setItem('hustlehub-custom-gig-types', JSON.stringify(customGigTypes));
+    localStorage.setItem('hustlehub-custom-categories', JSON.stringify(customCategories));
+}
+
+// Load custom items from localStorage
+function loadCustomItems() {
+    const savedGigTypes = localStorage.getItem('hustlehub-custom-gig-types');
+    const savedCategories = localStorage.getItem('hustlehub-custom-categories');
+    
+    if (savedGigTypes) {
+        try {
+            customGigTypes = JSON.parse(savedGigTypes);
+            activeFilters.gigTypes = [...customGigTypes];
+            updateGigTypeOptions();
+        } catch (error) {
+            console.error('Error loading custom gig types:', error);
+        }
+    }
+    
+    if (savedCategories) {
+        try {
+            customCategories = JSON.parse(savedCategories);
+            activeFilters.categories = [...customCategories];
+            updateCategoryOptions();
+        } catch (error) {
+            console.error('Error loading custom categories:', error);
+        }
     }
 }
 

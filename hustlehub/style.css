@@ -705,6 +705,15 @@ body {
     justify-content: center;
 }
 
+/* Create Item Form Styles */
+.input-hint {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
 /* Clear All Section */
 .clear-all-section {
     padding: 20px 30px;

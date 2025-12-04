@@ -34,9 +34,9 @@
                 <i class="fas fa-plus-circle"></i>
                 <span>Create an Item</span>
             </div>
-            <div class="menu-item" id="menu-edit-delete">
-                <i class="fas fa-edit"></i>
-                <span>Edit/Delete an Item</span>
+            <div class="menu-item" id="menu-net-worth">
+                <i class="fas fa-chart-line"></i>
+                <span>Net Worth</span>
             </div>
         </div>
 
@@ -161,6 +161,67 @@
                                 <i class="fas fa-check"></i> Add Transaction
                             </button>
                             <button type="button" id="cancel-btn" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Net Worth Modal -->
+        <div id="net-worth-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-chart-line"></i> Net Worth Summary</h2>
+                    <button id="close-net-worth-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="net-worth-display">
+                        <div class="net-worth-card">
+                            <h3><i class="fas fa-calendar-week"></i> Weekly Net Worth</h3>
+                            <p class="net-amount" id="modal-weekly-net">$0.00</p>
+                            <small>Last 7 days</small>
+                        </div>
+                        <div class="net-worth-card">
+                            <h3><i class="fas fa-calendar-alt"></i> Monthly Net Worth</h3>
+                            <p class="net-amount" id="modal-monthly-net">$0.00</p>
+                            <small>Last 30 days</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Item Form (Hidden by default) -->
+        <div id="create-item-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-plus-circle"></i> Create New Item</h2>
+                    <button id="close-create-item-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-item-form">
+                        <div class="form-group">
+                            <label for="item-type-select"><i class="fas fa-list"></i> Item Type:</label>
+                            <select id="item-type-select" required>
+                                <option value="">Select type...</option>
+                                <option value="gigType">Gig Type</option>
+                                <option value="category">Category</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="item-name-input"><i class="fas fa-tag"></i> Name:</label>
+                            <input type="text" id="item-name-input" placeholder="e.g., 'Instacart' or 'Equipment'" required>
+                            <small class="input-hint">Enter a unique name for this item</small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Create Item
+                            </button>
+                            <button type="button" id="cancel-create-item-btn" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> Cancel
                             </button>
                         </div>
